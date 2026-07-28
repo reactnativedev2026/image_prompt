@@ -1,59 +1,152 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Animated, Modal, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import FastImage from 'react-native-fast-image';
 import { useTranslation } from 'react-i18next';
+import GphApiClient from 'giphy-js-sdk-core';
+import Share from 'react-native-share';
+import RNFS from 'react-native-fs';
 import { toggleFavouriteGif, isFavouriteGif } from '../store/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { mapGiphyGifResults } from '../utils/giphy';
 
-const TENOR_API_KEY = 'YOUR_TENOR_API_KEY'; // Placeholder
+const GIPHY_API_KEY = '0olOpHALjZ7mCBDdwPXF7wkva0SH6Fmt';
+const giphyClient = GphApiClient(GIPHY_API_KEY);
 
 const GifsScreen = () => {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('birthday');
   const [gifs, setGifs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [favs, setFavs] = useState<Record<string, boolean>>({});
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [selectedGif, setSelectedGif] = useState<any | null>(null);
+  const spinValue = useRef(new Animated.Value(0)).current;
 
-  // Mock fetching for now until API key is provided
-  const fetchGifs = async () => {
-    setLoading(true);
-    setTimeout(async () => {
-      // Realistic GIF URLs
-      const fetched = [
-        { id: '1', url: 'https://media.giphy.com/media/g5R9dok94mrIvplmZd/giphy.gif', title: 'Happy Birthday 1' },
-        { id: '2', url: 'https://media.giphy.com/media/LzwcNOrbA3aYvJZk2n/giphy.gif', title: 'Happy Birthday 2' },
-        { id: '3', url: 'https://media.giphy.com/media/kdQuvu0LtCEjxYgTcS/giphy.gif', title: 'Happy Birthday 3' },
-        { id: '4', url: 'https://media.giphy.com/media/xUySTP8mX09yU85u5W/giphy.gif', title: 'Happy Birthday 4' },
-      ];
-      setGifs(fetched);
-      
+  const startSpin = () => {
+    Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 900,
+        useNativeDriver: true,
+      })
+    ).start();
+  };
+
+  useEffect(() => {
+    startSpin();
+  }, [spinValue]);
+
+  const fetchGifs = async (query = searchQuery, nextOffset = 0, append = false) => {
+    if (!query.trim()) {
+      return;
+    }
+
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setOffset(0);
+      setHasMore(true);
+    }
+    setError(null);
+
+    try {
+      const response = await giphyClient.search('gifs', { q: query, limit: 20, offset: nextOffset, rating: 'g' });
+      const fetched = mapGiphyGifResults(response?.data || []);
+      const nextItems = append ? [...gifs, ...fetched] : fetched;
+      setGifs(nextItems);
+      setHasMore(fetched.length === 20);
+      setOffset(nextOffset + fetched.length);
+
       const newFavs: Record<string, boolean> = {};
-      for (const g of fetched) {
-        newFavs[g.id] = await isFavouriteGif(g.id);
+      for (const gif of fetched) {
+        newFavs[gif.id] = await isFavouriteGif(gif.id);
       }
-      setFavs(newFavs);
-      
+      setFavs((prev) => ({ ...prev, ...newFavs }));
+    } catch (err) {
+      setError('Unable to load GIFs right now. Please try again.');
+      if (!append) {
+        setGifs([]);
+      }
+    } finally {
       setLoading(false);
-    }, 1000);
+      setLoadingMore(false);
+    }
   };
 
   useEffect(() => {
     fetchGifs();
   }, []);
 
+  const handleShare = async (gif: any) => {
+    setSharing(true);
+    try {
+      const fileName = `${gif.id || 'gif'}.gif`;
+      const downloadDir = Platform.OS === 'android'
+        ? RNFS.DownloadDirectoryPath
+        : RNFS.DocumentDirectoryPath;
+      const localPath = `${downloadDir}/${fileName}`;
+
+      const response = await fetch(gif.url);
+      const arrayBuffer = await response.arrayBuffer();
+      const base64 = arrayBufferToBase64(arrayBuffer);
+      await RNFS.writeFile(localPath, base64, 'base64');
+
+      await Share.open({
+        title: gif.title || 'Birthday GIF',
+        message: 'Check out this GIF!',
+        type: 'image/gif',
+        url: `file://${localPath}`,
+        failOnCancel: false,
+      });
+
+      if (Platform.OS === 'android') {
+        await Share.open({
+          title: gif.title || 'Birthday GIF',
+          message: gif.url,
+          type: 'text/plain',
+          failOnCancel: false,
+        });
+      }
+    } catch (err) {
+      console.log('Share cancelled', err);
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const arrayBufferToBase64 = (arrayBuffer: ArrayBuffer) => {
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i += 1) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = (globalThis as typeof globalThis & { btoa?: (value: string) => string }).btoa;
+    return base64 ? base64(binary) : binary;
+  };
+
   const renderGifItem = ({ item }: { item: any }) => (
-    <View style={styles.gifCard}>
+    <TouchableOpacity style={styles.gifCard} onPress={() => setSelectedGif(item)} activeOpacity={0.9}>
       <FastImage 
         style={styles.gifPlaceholder} 
         source={{ uri: item.url, priority: FastImage.priority.normal }} 
         resizeMode={FastImage.resizeMode.cover} 
       />
       <View style={styles.gifActions}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Icon name="share-social-outline" size={24} color={colors.primaryDark} />
+        <TouchableOpacity style={styles.actionButton} onPress={() => handleShare(item)} disabled={sharing}>
+          {sharing ? (
+            <ActivityIndicator size="small" color={colors.primaryDark} />
+          ) : (
+            <Icon name="share-social-outline" size={24} color={colors.primaryDark} />
+          )}
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.actionButton}
@@ -65,7 +158,7 @@ const GifsScreen = () => {
           <Icon name={favs[item.id] ? "heart" : "heart-outline"} size={24} color={colors.favourite} />
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -82,12 +175,29 @@ const GifsScreen = () => {
           placeholderTextColor={colors.textLight}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          onSubmitEditing={fetchGifs}
+          onSubmitEditing={() => fetchGifs(searchQuery, 0, false)}
         />
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color={colors.primaryDark} style={{ marginTop: 50 }} />
+        <View style={styles.loadingState}>
+          <Animated.View
+            style={{
+              transform: [{ rotate: spinValue.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }],
+            }}
+          >
+            <Icon name="refresh-outline" size={30} color={colors.primaryDark} />
+          </Animated.View>
+          <Text style={styles.loadingText}>Loading GIFs...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>{error}</Text>
+        </View>
+      ) : gifs.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>No GIFs found.</Text>
+        </View>
       ) : (
         <FlatList
           data={gifs}
@@ -95,8 +205,64 @@ const GifsScreen = () => {
           renderItem={renderGifItem}
           numColumns={2}
           contentContainerStyle={styles.listContainer}
+          onEndReached={() => {
+            if (!loadingMore && hasMore) {
+              fetchGifs(searchQuery, offset, true);
+            }
+          }}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={colors.primaryDark} />
+                <Text style={styles.footerText}>Loading more GIFs...</Text>
+              </View>
+            ) : null
+          }
         />
       )}
+
+      <Modal visible={!!selectedGif} transparent animationType="fade" onRequestClose={() => setSelectedGif(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{selectedGif?.title || 'GIF Preview'}</Text>
+              <TouchableOpacity onPress={() => setSelectedGif(null)}>
+                <Icon name="close" size={24} color={colors.primaryDark} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedGif?.url ? (
+              <FastImage
+                style={styles.modalImage}
+                source={{ uri: selectedGif.url, priority: FastImage.priority.high }}
+                resizeMode={FastImage.resizeMode.contain}
+              />
+            ) : null}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalButton} onPress={() => handleShare(selectedGif)} disabled={sharing}>
+                {sharing ? (
+                  <ActivityIndicator size="small" color={colors.primaryDark} />
+                ) : (
+                  <Icon name="share-social-outline" size={20} color={colors.primaryDark} />
+                )}
+                <Text style={styles.modalButtonText}>Share</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={async () => {
+                  const isFav = await toggleFavouriteGif(selectedGif);
+                  setFavs({ ...favs, [selectedGif.id]: isFav });
+                }}
+              >
+                <Icon name={favs[selectedGif?.id] ? 'heart' : 'heart-outline'} size={20} color={colors.favourite} />
+                <Text style={styles.modalButtonText}>Fav</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -169,6 +335,87 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: 5,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  emptyTitle: {
+    fontSize: typography.sizes.md,
+    color: colors.textLight,
+    textAlign: 'center',
+  },
+  loadingState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: typography.sizes.md,
+    color: colors.textLight,
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerText: {
+    marginTop: 8,
+    fontSize: typography.sizes.sm,
+    color: colors.textLight,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.primaryDark,
+    flex: 1,
+    marginRight: 8,
+  },
+  modalImage: {
+    width: '100%',
+    height: 320,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 16,
+  },
+  modalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: colors.background,
+  },
+  modalButtonText: {
+    marginLeft: 6,
+    color: colors.primaryDark,
+    fontWeight: typography.weights.bold,
   }
 });
 
