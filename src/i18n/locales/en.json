@@ -1,0 +1,39 @@
+{
+  "common": {
+    "search": "Search",
+    "copy": "Copy",
+    "share": "Share",
+    "favourite": "Favourite"
+  },
+  "home": {
+    "popularCategories": "Popular Categories",
+    "latestWishes": "Latest Wishes",
+    "trendingGifs": "Trending GIFs",
+    "birthdayImages": "Birthday Images"
+  },
+  "categories": {
+    "friend": "Friend",
+    "bestFriend": "Best Friend",
+    "brother": "Brother",
+    "sister": "Sister",
+    "mother": "Mother",
+    "father": "Father",
+    "husband": "Husband",
+    "wife": "Wife",
+    "son": "Son",
+    "daughter": "Daughter",
+    "boyfriend": "Boyfriend",
+    "girlfriend": "Girlfriend",
+    "funnyWishes": "Funny Wishes",
+    "romanticWishes": "Romantic Wishes",
+    "inspirationalWishes": "Inspirational Wishes"
+  },
+  "settings": {
+    "title": "Settings",
+    "changeLanguage": "Change Language",
+    "rateApp": "Rate App",
+    "shareApp": "Share App",
+    "privacyPolicy": "Privacy Policy",
+    "aboutUs": "About Us"
+  }
+}
