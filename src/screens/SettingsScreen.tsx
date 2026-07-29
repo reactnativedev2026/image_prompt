@@ -54,11 +54,11 @@ const SettingsScreen = () => {
 
       <ScrollView style={styles.content}>
         <View style={styles.section}>
-          <SettingsItem 
+          {/* <SettingsItem 
             icon="language-outline" 
             title={t('settings.changeLanguage')} 
             onPress={handleChangeLanguage} 
-          />
+          /> */}
           <SettingsItem 
             icon="star-outline" 
             title={t('settings.rateApp')} 

@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { getStoredLanguage } from '../store/storage';
 
+import SplashScreen from '../screens/SplashScreen';
 import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
 import WishDetailsScreen from '../screens/WishDetailsScreen';
 import GifsScreen from '../screens/GifsScreen';
@@ -12,6 +13,7 @@ import CardMakerScreen from '../screens/CardMakerScreen';
 import BottomTabNavigator from './BottomTabNavigator';
 
 export type RootStackParamList = {
+  Splash: undefined;
   LanguageSelection: undefined;
   Main: undefined;
   WishDetails: { wishId?: string, wishText?: string, category?: string };
@@ -28,12 +30,8 @@ const AppNavigator = () => {
 
   useEffect(() => {
     const checkFirstLaunch = async () => {
-      const storedLang = await getStoredLanguage();
-      if (storedLang) {
-        setInitialRoute('Main');
-      } else {
-        setInitialRoute('LanguageSelection');
-      }
+      // Temporarily skip language selection, show splash first
+      setInitialRoute('Splash');
     };
 
     checkFirstLaunch();
@@ -47,6 +45,7 @@ const AppNavigator = () => {
         initialRouteName={initialRoute}
         screenOptions={{ headerShown: false }}
       >
+        <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
         <Stack.Screen name="Main" component={BottomTabNavigator} />
         <Stack.Screen name="WishDetails" component={WishDetailsScreen} />

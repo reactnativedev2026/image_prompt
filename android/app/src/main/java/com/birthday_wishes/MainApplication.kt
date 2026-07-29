@@ -1,4 +1,4 @@
-package com.birthday_wishes
+package com.happy_birthday_wishes_gif
 
 import android.app.Application
 import com.facebook.react.PackageList
