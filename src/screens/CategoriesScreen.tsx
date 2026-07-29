@@ -10,23 +10,30 @@ import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Main'>;
 
-const ALL_CATEGORIES = [
-  { id: 'friend', icon: 'people-outline' },
-  { id: 'bestFriend', icon: 'star-outline' },
-  { id: 'brother', icon: 'person-outline' },
-  { id: 'sister', icon: 'person-outline' },
-  { id: 'mother', icon: 'heart-outline' },
-  { id: 'father', icon: 'heart-outline' },
-  { id: 'husband', icon: 'male-outline' },
-  { id: 'wife', icon: 'female-outline' },
-  { id: 'son', icon: 'happy-outline' },
-  { id: 'daughter', icon: 'happy-outline' },
-  { id: 'boyfriend', icon: 'rose-outline' },
-  { id: 'girlfriend', icon: 'rose-outline' },
-  { id: 'funnyWishes', icon: 'happy-outline' },
-  { id: 'romanticWishes', icon: 'heart-circle-outline' },
-  { id: 'inspirationalWishes', icon: 'bulb-outline' }
-];
+import WISHES_DATA from '../data';
+
+const iconMap: Record<string, string> = {
+  friend: 'people-outline',
+  bestFriend: 'star-outline',
+  brother: 'person-outline',
+  sister: 'person-outline',
+  mother: 'heart-outline',
+  father: 'heart-outline',
+  husband: 'male-outline',
+  wife: 'female-outline',
+  son: 'happy-outline',
+  daughter: 'happy-outline',
+  boyfriend: 'rose-outline',
+  girlfriend: 'rose-outline',
+  funnyWishes: 'happy-outline',
+  romanticWishes: 'heart-circle-outline',
+  inspirationalWishes: 'bulb-outline'
+};
+
+const ALL_CATEGORIES = Object.keys(WISHES_DATA).map(key => ({
+  id: key,
+  icon: iconMap[key] || 'star-outline'
+}));
 
 const CategoriesScreen = () => {
   const { t } = useTranslation();
@@ -90,7 +97,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
-    elevation: 2,
+    // elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,

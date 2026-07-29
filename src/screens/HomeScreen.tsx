@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   FlatList,
@@ -18,20 +18,37 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
-const POPULAR_CATEGORIES = ['friend', 'mother', 'father', 'sister', 'brother'];
+import WISHES_DATA from '../data';
 
-const LATEST_WISHES = [
-  { id: '1', text: 'Happy birthday to my amazing friend! Wishing you all the best.', category: 'friend' },
-  { id: '2', text: 'To the best mother in the world, happy birthday!', category: 'mother' },
-  { id: '3', text: 'Wishing a fantastic birthday to a fantastic father.', category: 'father' },
-];
+const iconMap: Record<string, string> = {
+  friend: 'people-outline',
+  mother: 'woman-outline',
+  father: 'man-outline',
+  sister: 'rose-outline',
+  brother: 'football-outline',
+  funnyWishes: 'happy-outline',
+  romanticWishes: 'heart-outline',
+  inspirationalWishes: 'star-outline',
+  boyfriend: 'male-outline',
+  girlfriend: 'female-outline',
+  bestFriend: 'medal-outline',
+  husband: 'briefcase-outline',
+  wife: 'diamond-outline',
+  son: 'game-controller-outline',
+  daughter: 'flower-outline'
+};
+
+const POPULAR_CATEGORIES = Object.keys(WISHES_DATA).slice(0, 5);
+
+const LATEST_WISHES = Object.entries(WISHES_DATA)
+  .flatMap(([cat, wishes]) => (wishes as any[]).map(w => ({ ...w, category: cat })))
+  .slice(0, 3);
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Main'>;
 
 const HomeScreen = () => {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
-  const [searchQuery, setSearchQuery] = useState('');
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -42,50 +59,52 @@ const HomeScreen = () => {
     }).start();
   }, [fadeAnim]);
 
-  const renderCategoryItem = ({ item }: { item: string }) => (
-    <TouchableOpacity 
-      style={styles.categoryCard} 
-      onPress={() => navigation.navigate('WishList', { category: item })}
-    >
-      <Icon name="gift-outline" size={24} color={colors.primaryDark} />
-      <Text style={styles.categoryText}>{t(`categories.${item}`)}</Text>
-    </TouchableOpacity>
-  );
+  const renderCategoryItem = ({ item, index }: { item: string, index: number }) => {
+    const bgColors = ['#ffebee', '#e8f5e9', '#e3f2fd', '#fff3e0', '#f3e5f5'];
+    const bgColor = bgColors[index % bgColors.length];
 
-  const renderWishItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={styles.latestWishCard}
-      onPress={() => navigation.navigate('WishDetails', { wishId: item.id, wishText: item.text, category: item.category })}
-    >
-      <Icon name="quote" size={20} color={colors.primaryLight} style={styles.quoteIcon} />
-      <Text style={styles.latestWishText} numberOfLines={3}>{item.text}</Text>
-    </TouchableOpacity>
-  );
+    return (
+      <TouchableOpacity
+        style={[styles.categoryCard, { backgroundColor: bgColor }]}
+        onPress={() => navigation.navigate('WishList', { category: item })}
+      >
+        <Icon name={iconMap[item] || "gift-outline"} size={28} color={colors.primaryDark} />
+        <Text style={styles.categoryText}>{t(`categories.${item}`)}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderWishItem = ({ item, index }: { item: any, index: number }) => {
+    const bgColors = ['#64b5f6', '#ffb74d', '#81c784'];
+    const bgColor = bgColors[index % bgColors.length];
+    return (
+      <View style={[styles.latestWishCard, { backgroundColor: bgColor }]}>
+        <Icon name="quote" size={50} color="rgba(255,255,255,0.2)" style={styles.quoteIcon} />
+        <Text style={styles.latestWishText} numberOfLines={3}>{item.text}</Text>
+        <Text style={styles.latestWishCategory}>{t(`categories.${item.category}`)}</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Birthday Wishes</Text>
+        <Text style={styles.headerSubtitle}>Find the perfect message</Text>
       </View>
 
       <Animated.ScrollView style={[styles.content, { opacity: fadeAnim }]} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
+        <TouchableOpacity 
+          style={styles.searchContainer}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('WishList', { focusSearch: true })}
+        >
           <Icon name="search" size={20} color={colors.textLight} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={t('common.search') + "..."}
-            placeholderTextColor={colors.textLight}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={() => {
-              if (searchQuery.trim().length > 0) {
-                navigation.navigate('WishList', { searchQuery });
-                setSearchQuery('');
-              }
-            }}
-          />
-        </View>
+          <Text style={[styles.searchInput, { textAlignVertical: 'center', color: colors.textLight }]}>
+            {t('common.search') + "..."}
+          </Text>
+        </TouchableOpacity>
 
         {/* Popular Categories */}
         <View style={styles.sectionContainer}>
@@ -121,25 +140,33 @@ const HomeScreen = () => {
         {/* Trending GIFs Placeholder */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>{t('home.trendingGifs')}</Text>
-          <TouchableOpacity 
-            style={styles.placeholderCard}
+          <TouchableOpacity
+            style={[styles.bannerCard, { backgroundColor: '#e3f2fd' }]}
             onPress={() => navigation.navigate('Gifs')}
           >
-            <Text style={styles.placeholderText}>Tap to view Trending GIFs</Text>
+            <View style={styles.bannerContent}>
+              <Text style={styles.bannerTitle}>Explore GIFs</Text>
+              <Text style={styles.bannerSubtitle}>Animated birthday wishes</Text>
+            </View>
+            <Icon name="videocam-outline" size={70} color="#90caf9" style={styles.bannerIcon} />
           </TouchableOpacity>
         </View>
 
         {/* Birthday Images Placeholder */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>{t('home.birthdayImages')}</Text>
-          <TouchableOpacity 
-            style={styles.placeholderCard}
+          <TouchableOpacity
+            style={[styles.bannerCard, { backgroundColor: '#fce4ec' }]}
             onPress={() => navigation.navigate('Images')}
           >
-            <Text style={styles.placeholderText}>Tap to view Beautiful Images</Text>
+            <View style={styles.bannerContent}>
+              <Text style={styles.bannerTitle}>Beautiful Images</Text>
+              <Text style={styles.bannerSubtitle}>Perfect for sharing</Text>
+            </View>
+            <Icon name="image-outline" size={70} color="#f48fb1" style={styles.bannerIcon} />
           </TouchableOpacity>
         </View>
-        
+
         <View style={{ height: 40 }} />
       </Animated.ScrollView>
     </SafeAreaView>
@@ -153,15 +180,20 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 10,
+    paddingTop: 15,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: typography.sizes.xl,
+    fontSize: 28,
     fontWeight: typography.weights.bold,
     color: colors.primaryDark,
+  },
+  headerSubtitle: {
+    fontSize: typography.sizes.md,
+    color: colors.textLight,
+    marginTop: 5,
   },
   content: {
     flex: 1,
@@ -169,17 +201,12 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: '#fff',
     margin: 20,
-    borderRadius: 12,
-    paddingHorizontal: 15,
+    borderRadius: 25,
+    paddingHorizontal: 20,
     borderWidth: 1,
-    borderColor: colors.border,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    borderColor: 'rgba(0,0,0,0.08)',
   },
   searchIcon: {
     marginRight: 10,
@@ -205,42 +232,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   categoryCard: {
-    backgroundColor: colors.surface,
     padding: 15,
-    marginHorizontal: 5,
-    borderRadius: 12,
+    marginHorizontal: 8,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 100,
+    width: 105,
+    height: 105,
     borderWidth: 1,
-    borderColor: colors.border,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   categoryText: {
-    marginTop: 8,
+    marginTop: 10,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.text,
+    fontWeight: typography.weights.bold,
+    color: colors.primaryDark,
     textAlign: 'center',
   },
-  placeholderCard: {
-    backgroundColor: colors.surface,
+  bannerCard: {
     marginHorizontal: 20,
-    padding: 30,
-    borderRadius: 12,
+    borderRadius: 16,
+    padding: 25,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
-  placeholderText: {
-    color: colors.textLight,
+  bannerContent: {
+    flex: 1,
+    zIndex: 1,
+  },
+  bannerTitle: {
+    fontSize: 22,
+    fontWeight: typography.weights.bold,
+    color: '#333',
+    marginBottom: 5,
+  },
+  bannerSubtitle: {
     fontSize: typography.sizes.sm,
+    color: '#666',
+  },
+  bannerIcon: {
+    position: 'absolute',
+    right: 5,
+    bottom: -15,
+    opacity: 0.4,
+    transform: [{ rotate: '-15deg' }]
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -255,30 +293,34 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   latestWishCard: {
-    backgroundColor: colors.surface,
     padding: 20,
-    marginHorizontal: 5,
-    borderRadius: 12,
-    width: 250,
+    marginHorizontal: 8,
+    borderRadius: 16,
+    width: 280,
     borderWidth: 1,
-    borderColor: colors.border,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   latestWishText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text,
-    lineHeight: 20,
-    marginTop: 10,
+    fontSize: 16,
+    fontWeight: typography.weights.medium,
+    color: '#fff',
+    lineHeight: 24,
+    marginTop: 15,
+    zIndex: 1,
+  },
+  latestWishCategory: {
+    fontSize: typography.sizes.xs,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 15,
+    fontWeight: typography.weights.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    zIndex: 1,
   },
   quoteIcon: {
     position: 'absolute',
-    top: 10,
-    left: 10,
-    opacity: 0.2,
+    top: 5,
+    right: 15,
   }
 });
 

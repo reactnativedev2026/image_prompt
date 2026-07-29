@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/Ionicons';
 import FastImage from 'react-native-fast-image';
-import { getFavouriteWishes, getFavouriteGifs, getFavouriteImages } from '../store/storage';
+import { getFavouriteWishes, getFavouriteGifs, getFavouriteImages, toggleFavouriteWish, toggleFavouriteGif, toggleFavouriteImage } from '../store/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
@@ -24,6 +24,21 @@ const FavouritesScreen = () => {
     loadFavs();
   }, [activeTab]); // reload when switching tabs
 
+  const removeWish = async (item: any) => {
+    await toggleFavouriteWish(item);
+    setFavWishes(prev => prev.filter(w => w.id !== item.id));
+  };
+
+  const removeGif = async (item: any) => {
+    await toggleFavouriteGif(item);
+    setFavGifs(prev => prev.filter(g => g.id !== item.id));
+  };
+
+  const removeImage = async (item: any) => {
+    await toggleFavouriteImage(item);
+    setFavImages(prev => prev.filter(i => i.id !== item.id));
+  };
+
   const renderEmptyState = () => (
     <View style={styles.emptyStateContainer}>
       <Icon name="heart-dislike-outline" size={60} color={colors.textLight} />
@@ -39,27 +54,42 @@ const FavouritesScreen = () => {
   const renderWish = ({ item }: { item: any }) => (
     <View style={styles.card}>
       <Text style={styles.wishText}>{item.text}</Text>
+      <TouchableOpacity onPress={() => removeWish(item)} style={styles.removeButton}>
+        <Icon name="heart-dislike" size={24} color={colors.favourite} />
+      </TouchableOpacity>
     </View>
   );
 
-  const renderMedia = ({ item }: { item: any }) => (
+  const renderGif = ({ item }: { item: any }) => (
     <View style={styles.mediaCard}>
       <FastImage source={{ uri: item.url }} style={styles.mediaImage} resizeMode={FastImage.resizeMode.cover} />
+      <TouchableOpacity onPress={() => removeGif(item)} style={styles.removeMediaButton}>
+        <Icon name="heart-dislike-circle" size={28} color={colors.favourite} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderImage = ({ item }: { item: any }) => (
+    <View style={styles.mediaCard}>
+      <FastImage source={{ uri: item.url }} style={styles.mediaImage} resizeMode={FastImage.resizeMode.cover} />
+      <TouchableOpacity onPress={() => removeImage(item)} style={styles.removeMediaButton}>
+        <Icon name="heart-dislike-circle" size={28} color={colors.favourite} />
+      </TouchableOpacity>
     </View>
   );
 
   const renderContent = () => {
     if (activeTab === 'wishes') {
       return favWishes.length > 0 ? (
-        <FlatList data={favWishes} keyExtractor={i => i.id} renderItem={renderWish} contentContainerStyle={styles.list} />
+        <FlatList key="wishes-list" data={favWishes} keyExtractor={i => i.id} renderItem={renderWish} contentContainerStyle={styles.list} />
       ) : renderEmptyState();
     } else if (activeTab === 'gifs') {
       return favGifs.length > 0 ? (
-        <FlatList data={favGifs} keyExtractor={i => i.id} renderItem={renderMedia} numColumns={2} contentContainerStyle={styles.list} />
+        <FlatList key="gifs-list" data={favGifs} keyExtractor={i => i.id} renderItem={renderGif} numColumns={2} contentContainerStyle={styles.list} />
       ) : renderEmptyState();
     } else {
       return favImages.length > 0 ? (
-        <FlatList data={favImages} keyExtractor={i => i.id} renderItem={renderMedia} numColumns={2} contentContainerStyle={styles.list} />
+        <FlatList key="images-list" data={favImages} keyExtractor={i => i.id} renderItem={renderImage} numColumns={2} contentContainerStyle={styles.list} />
       ) : renderEmptyState();
     }
   };
@@ -185,6 +215,20 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.textLight,
     textAlign: 'center',
+  },
+  removeButton: {
+    position: 'absolute',
+    bottom: 10,
+    right: 15,
+    padding: 5,
+  },
+  removeMediaButton: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderRadius: 20,
+    padding: 2,
   }
 });
 

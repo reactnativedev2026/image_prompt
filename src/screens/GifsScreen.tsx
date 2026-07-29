@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Animated, Modal, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Animated, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import FastImage from 'react-native-fast-image';
@@ -21,7 +21,7 @@ const GifsScreen = () => {
   const [gifs, setGifs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [sharing, setSharing] = useState(false);
+  const [sharingId, setSharingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [favs, setFavs] = useState<Record<string, boolean>>({});
   const [offset, setOffset] = useState(0);
@@ -70,6 +70,9 @@ const GifsScreen = () => {
         newFavs[gif.id] = await isFavouriteGif(gif.id);
       }
       setFavs((prev) => ({ ...prev, ...newFavs }));
+
+      // Pre-cache GIFs in background for instant sharing
+      precacheGifs(fetched);
     } catch (err) {
       setError('Unable to load GIFs right now. Please try again.');
       if (!append) {
@@ -81,56 +84,60 @@ const GifsScreen = () => {
     }
   };
 
+  // Background pre-cache: download share GIFs silently so share is instant
+  const precacheGifs = async (gifList: any[]) => {
+    for (const gif of gifList) {
+      try {
+        const fileName = `${gif.id || 'gif'}.gif`;
+        const localPath = `${RNFS.CachesDirectoryPath}/${fileName}`;
+        const exists = await RNFS.exists(localPath);
+        if (!exists) {
+          RNFS.downloadFile({
+            fromUrl: gif.shareUrl || gif.url,
+            toFile: localPath,
+          });
+          // Fire-and-forget, no await — downloads happen in background
+        }
+      } catch (_) {
+        // Silently ignore pre-cache errors
+      }
+    }
+  };
+
   useEffect(() => {
     fetchGifs();
   }, []);
 
   const handleShare = async (gif: any) => {
-    setSharing(true);
+    setSharingId(gif.id);
     try {
       const fileName = `${gif.id || 'gif'}.gif`;
-      const downloadDir = Platform.OS === 'android'
-        ? RNFS.DownloadDirectoryPath
-        : RNFS.DocumentDirectoryPath;
-      const localPath = `${downloadDir}/${fileName}`;
+      const localPath = `${RNFS.CachesDirectoryPath}/${fileName}`;
 
-      const response = await fetch(gif.url);
-      const arrayBuffer = await response.arrayBuffer();
-      const base64 = arrayBufferToBase64(arrayBuffer);
-      await RNFS.writeFile(localPath, base64, 'base64');
+      // Check if already pre-cached
+      const fileExists = await RNFS.exists(localPath);
+      if (!fileExists) {
+        const downloadResult = await RNFS.downloadFile({
+          fromUrl: gif.shareUrl || gif.url,
+          toFile: localPath,
+        }).promise;
+
+        if (downloadResult.statusCode !== 200) {
+          throw new Error('Download failed');
+        }
+      }
 
       await Share.open({
         title: gif.title || 'Birthday GIF',
-        message: 'Check out this GIF!',
         type: 'image/gif',
         url: `file://${localPath}`,
         failOnCancel: false,
       });
-
-      if (Platform.OS === 'android') {
-        await Share.open({
-          title: gif.title || 'Birthday GIF',
-          message: gif.url,
-          type: 'text/plain',
-          failOnCancel: false,
-        });
-      }
     } catch (err) {
       console.log('Share cancelled', err);
     } finally {
-      setSharing(false);
+      setSharingId(null);
     }
-  };
-
-  const arrayBufferToBase64 = (arrayBuffer: ArrayBuffer) => {
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = '';
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i += 1) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = (globalThis as typeof globalThis & { btoa?: (value: string) => string }).btoa;
-    return base64 ? base64(binary) : binary;
   };
 
   const renderGifItem = ({ item }: { item: any }) => (
@@ -141,8 +148,8 @@ const GifsScreen = () => {
         resizeMode={FastImage.resizeMode.cover} 
       />
       <View style={styles.gifActions}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => handleShare(item)} disabled={sharing}>
-          {sharing ? (
+        <TouchableOpacity style={styles.actionButton} onPress={() => handleShare(item)} disabled={sharingId === item.id}>
+          {sharingId === item.id ? (
             <ActivityIndicator size="small" color={colors.primaryDark} />
           ) : (
             <Icon name="share-social-outline" size={24} color={colors.primaryDark} />
@@ -241,8 +248,8 @@ const GifsScreen = () => {
             ) : null}
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => handleShare(selectedGif)} disabled={sharing}>
-                {sharing ? (
+              <TouchableOpacity style={styles.modalButton} onPress={() => handleShare(selectedGif)} disabled={sharingId === selectedGif?.id}>
+                {sharingId === selectedGif?.id ? (
                   <ActivityIndicator size="small" color={colors.primaryDark} />
                 ) : (
                   <Icon name="share-social-outline" size={20} color={colors.primaryDark} />

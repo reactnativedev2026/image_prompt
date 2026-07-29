@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Share, Alert, ToastAndroid, Platform, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
@@ -13,64 +13,85 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'WishList'>;
 type WishListRouteProp = RouteProp<RootStackParamList, 'WishList'>;
 
-// Mock database of wishes
-const MOCK_WISHES = [
-  { id: '1', category: 'friend', text: 'Happy birthday to my amazing friend! Wishing you all the best.' },
-  { id: '2', category: 'friend', text: 'Another year older, but still looking great! Happy birthday!' },
-  { id: '3', category: 'mother', text: 'Happy birthday Mom! Thank you for everything you do.' },
-  { id: '4', category: 'mother', text: 'To the best mother in the world, happy birthday!' },
-  { id: '5', category: 'father', text: 'Happy birthday Dad! You are my hero.' },
-  { id: '6', category: 'father', text: 'Wishing a fantastic birthday to a fantastic father.' },
-  { id: '7', category: 'sister', text: 'Happy birthday to my wonderful sister!' },
-  { id: '8', category: 'brother', text: 'Happy birthday brother! Let’s celebrate!' },
-  { id: '9', category: 'funnyWishes', text: 'Happy birthday! You’re one step closer to diapers again!' },
-  { id: '10', category: 'romanticWishes', text: 'Happy birthday my love. You mean the world to me.' },
-];
+import WISHES_DATA from '../data';
+
+const MOCK_WISHES = Object.entries(WISHES_DATA).flatMap(([cat, wishes]) => 
+  (wishes as any[]).map((wish: any) => ({ ...wish, category: cat }))
+);
+
+const shuffleArray = (array: any[]) => {
+  let currentIndex = array.length, randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
+};
 
 const WishListScreen = () => {
   const { t } = useTranslation();
-  const route = useRoute<WishListRouteProp>();
+  const route = useRoute<WishListRouteProp & { params: { focusSearch?: boolean } }>();
   const navigation = useNavigation<NavigationProp>();
-  
-  const category = route.params?.category;
-  const searchQuery = route.params?.searchQuery;
 
-  const [wishes, setWishes] = useState<any[]>([]);
+  const category = route.params?.category;
+  
+  const [localSearchQuery, setLocalSearchQuery] = useState(route.params?.searchQuery || '');
+  const [shuffledWishes] = useState(() => shuffleArray([...MOCK_WISHES]));
+
+  const [allWishes, setAllWishes] = useState<any[]>([]);
+  const [displayedWishes, setDisplayedWishes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [favs, setFavs] = useState<Record<string, boolean>>({});
+  
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     const loadWishes = async () => {
       setLoading(true);
-      
+
       // Filter mock data
-      let filtered = MOCK_WISHES;
+      let filtered = shuffledWishes;
       if (category) {
         filtered = filtered.filter(w => w.category === category);
-      } else if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filtered = filtered.filter(w => 
-          w.text.toLowerCase().includes(query) || 
+      } else if (localSearchQuery.trim().length > 0) {
+        const query = localSearchQuery.toLowerCase();
+        filtered = filtered.filter(w =>
+          w.text.toLowerCase().includes(query) ||
           t(`categories.${w.category}`).toLowerCase().includes(query)
         );
       }
 
-      // Check favs
+      setAllWishes(filtered);
+
+      const initialBatch = filtered.slice(0, PAGE_SIZE);
+
+      // Check favs only for initial batch to save performance
       const newFavs: Record<string, boolean> = {};
-      for (const w of filtered) {
+      for (const w of initialBatch) {
         newFavs[w.id] = await isFavouriteWish(w.id);
       }
       setFavs(newFavs);
-      
-      setWishes(filtered);
+
+      setDisplayedWishes(initialBatch);
       setLoading(false);
     };
 
     loadWishes();
-  }, [category, searchQuery, t]);
+  }, [category, localSearchQuery, t, shuffledWishes]);
 
-  const handleWishPress = (wish: any) => {
-    navigation.navigate('WishDetails', { wishId: wish.id, wishText: wish.text, category: wish.category });
+  const loadMoreWishes = async () => {
+    if (displayedWishes.length >= allWishes.length) return;
+
+    const nextBatch = allWishes.slice(displayedWishes.length, displayedWishes.length + PAGE_SIZE);
+    
+    const newFavs = { ...favs };
+    for (const w of nextBatch) {
+      newFavs[w.id] = await isFavouriteWish(w.id);
+    }
+    setFavs(newFavs);
+
+    setDisplayedWishes(prev => [...prev, ...nextBatch]);
   };
 
   const toggleFav = async (wish: any) => {
@@ -78,22 +99,46 @@ const WishListScreen = () => {
     setFavs(prev => ({ ...prev, [wish.id]: isFav }));
   };
 
+  const handleCopy = (text: string) => {
+    // Clipboard.setString(text);
+    if (Platform.OS === 'android') {
+      ToastAndroid.show('Wish copied to clipboard!', ToastAndroid.SHORT);
+    } else {
+      Alert.alert('Success', 'Wish copied to clipboard!');
+    }
+  };
+
+  const handleShare = async (text: string) => {
+    try {
+      await Share.share({ message: text });
+    } catch (error) {
+      console.log('Error sharing:', error);
+    }
+  };
+
   const renderWishItem = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.wishCard} onPress={() => handleWishPress(item)}>
+    <View style={styles.wishCard}>
       <Text style={styles.wishText}>{item.text}</Text>
-      
+
       <View style={styles.wishActions}>
         <Text style={styles.categoryBadge}>{t(`categories.${item.category}`)}</Text>
-        <TouchableOpacity style={styles.actionButton} onPress={() => toggleFav(item)}>
-          <Icon name={favs[item.id] ? "heart" : "heart-outline"} size={24} color={colors.favourite} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 15 }}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleCopy(item.text)}>
+            <Icon name="copy-outline" size={24} color={colors.textLight} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleShare(item.text)}>
+            <Icon name="share-social-outline" size={24} color={colors.textLight} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => toggleFav(item)}>
+            <Icon name={favs[item.id] ? "heart" : "heart-outline"} size={24} color={colors.favourite} />
+          </TouchableOpacity>
+        </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   const getTitle = () => {
     if (category) return t(`categories.${category}`);
-    if (searchQuery) return `Search: "${searchQuery}"`;
     return 'All Wishes';
   };
 
@@ -106,20 +151,36 @@ const WishListScreen = () => {
         <Text style={styles.headerTitle}>{getTitle()}</Text>
         <View style={{ width: 24 }} />
       </View>
+      
+      {!category && (
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color={colors.textLight} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t('common.search') + "..."}
+            placeholderTextColor={colors.textLight}
+            value={localSearchQuery}
+            onChangeText={setLocalSearchQuery}
+            autoFocus={route.params?.focusSearch}
+          />
+        </View>
+      )}
 
       {loading ? (
         <ActivityIndicator size="large" color={colors.primaryDark} style={{ marginTop: 50 }} />
-      ) : wishes.length === 0 ? (
+      ) : displayedWishes.length === 0 ? (
         <View style={styles.emptyState}>
           <Icon name="search-outline" size={60} color={colors.textLight} />
           <Text style={styles.emptyText}>No wishes found.</Text>
         </View>
       ) : (
         <FlatList
-          data={wishes}
+          data={displayedWishes}
           keyExtractor={(item) => item.id}
           renderItem={renderWishItem}
           contentContainerStyle={styles.listContainer}
+          onEndReached={loadMoreWishes}
+          onEndReachedThreshold={0.5}
         />
       )}
     </SafeAreaView>
@@ -200,6 +261,25 @@ const styles = StyleSheet.create({
     marginTop: 15,
     fontSize: typography.sizes.md,
     color: colors.textLight,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    margin: 15,
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: 50,
+    fontSize: typography.sizes.md,
+    color: colors.text,
   }
 });
 

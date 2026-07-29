@@ -8,6 +8,7 @@ import WishDetailsScreen from '../screens/WishDetailsScreen';
 import GifsScreen from '../screens/GifsScreen';
 import ImagesScreen from '../screens/ImagesScreen';
 import WishListScreen from '../screens/WishListScreen';
+import CardMakerScreen from '../screens/CardMakerScreen';
 import BottomTabNavigator from './BottomTabNavigator';
 
 export type RootStackParamList = {
@@ -17,6 +18,7 @@ export type RootStackParamList = {
   WishList: { category?: string, searchQuery?: string };
   Gifs: undefined;
   Images: undefined;
+  CardMaker: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -51,6 +53,7 @@ const AppNavigator = () => {
         <Stack.Screen name="WishList" component={WishListScreen} />
         <Stack.Screen name="Gifs" component={GifsScreen} />
         <Stack.Screen name="Images" component={ImagesScreen} />
+        <Stack.Screen name="CardMaker" component={CardMakerScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
