@@ -77,9 +77,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.happy_birthday_wishes_gif"
+    namespace "com.imageprompt"
     defaultConfig {
-        applicationId "com.happy_birthday_wishes_gif"
+        applicationId "com.imageprompt"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2
