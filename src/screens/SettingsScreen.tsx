@@ -1,136 +1,115 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Share from 'react-native-share';
-import { colors } from '../theme/colors';
-import { typography } from '../theme/typography';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { useAppContext } from '../store/AppContext';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Main'>;
+const availableTools = [
+  'Gemini', 'Canva', 'Bing Image Creator', 
+  'Leonardo', 'Ideogram', 'Playground', 
+  'Adobe Firefly', 'ChatGPT'
+];
 
-const SettingsScreen = () => {
-  const { t } = useTranslation();
-  const navigation = useNavigation<NavigationProp>();
+export const SettingsScreen = () => {
+  const { defaultTool, setDefaultTool, clearFavorites } = useAppContext();
 
-  const handleChangeLanguage = () => {
-    // Navigate back to LanguageSelectionScreen
-    navigation.replace('LanguageSelection');
+  const handleClearFavorites = () => {
+    Alert.alert(
+      "Clear Favorites",
+      "Are you sure you want to remove all your saved prompts?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Clear", style: "destructive", onPress: () => clearFavorites() }
+      ]
+    );
   };
-
-  const handleShareApp = async () => {
-    try {
-      await Share.open({
-        title: 'Birthday Wishes App',
-        message: 'Check out this awesome Birthday Wishes App! Find, copy, and share beautiful birthday wishes, GIFs, and images.',
-      });
-    } catch (error) {
-      console.log('Error sharing app:', error);
-    }
-  };
-
-  const handleRateApp = () => {
-    Alert.alert('Rate App', 'This will open the Play Store link.');
-  };
-
-  const SettingsItem = ({ icon, title, onPress }: { icon: string, title: string, onPress: () => void }) => (
-    <TouchableOpacity style={styles.settingsItem} onPress={onPress}>
-      <View style={styles.settingsItemLeft}>
-        <Icon name={icon} size={24} color={colors.primaryDark} style={styles.settingsIcon} />
-        <Text style={styles.settingsText}>{title}</Text>
-      </View>
-      <Icon name="chevron-forward" size={20} color={colors.textLight} />
-    </TouchableOpacity>
-  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('settings.title')}</Text>
+    <ScrollView style={styles.container}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Default Redirect Tool</Text>
+        <Text style={styles.sectionSubtitle}>Choose which tool opens when you tap "Open in..."</Text>
+        
+        {availableTools.map(tool => (
+          <TouchableOpacity 
+            key={tool} 
+            style={styles.toolRow}
+            onPress={() => setDefaultTool(tool)}
+          >
+            <Text style={styles.toolText}>{tool}</Text>
+            {defaultTool === tool && (
+              <Icon name="check-circle" size={24} color="#FFBF00" />
+            )}
+            {defaultTool !== tool && (
+              <Icon name="circle-outline" size={24} color="#CCC" />
+            )}
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          {/* <SettingsItem 
-            icon="language-outline" 
-            title={t('settings.changeLanguage')} 
-            onPress={handleChangeLanguage} 
-          /> */}
-          <SettingsItem 
-            icon="star-outline" 
-            title={t('settings.rateApp')} 
-            onPress={handleRateApp} 
-          />
-          <SettingsItem 
-            icon="share-social-outline" 
-            title={t('settings.shareApp')} 
-            onPress={handleShareApp} 
-          />
-          <SettingsItem 
-            icon="shield-checkmark-outline" 
-            title={t('settings.privacyPolicy')} 
-            onPress={() => Alert.alert('Privacy Policy', 'Coming soon')} 
-          />
-          <SettingsItem 
-            icon="information-circle-outline" 
-            title={t('settings.aboutUs')} 
-            onPress={() => Alert.alert('About Us', 'Birthday Wishes App v0.0.1')} 
-          />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Data Management</Text>
+        <TouchableOpacity style={styles.dangerButton} onPress={handleClearFavorites}>
+          <Icon name="delete-outline" size={20} color="#FF3B30" />
+          <Text style={styles.dangerText}>Clear All Favorites</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>About</Text>
+        <Text style={styles.aboutText}>Image Prompt v1.0.0</Text>
+        <Text style={styles.aboutText}>Created for prompt engineers.</Text>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    padding: 20,
-    paddingTop: 10,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.primaryDark,
-  },
-  content: {
-    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   section: {
-    marginTop: 20,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-  },
-  settingsItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#EEEEEE',
   },
-  settingsItemLeft: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 16,
+  },
+  toolRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  toolText: {
+    fontSize: 16,
+    color: '#333333',
+  },
+  dangerButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 12,
   },
-  settingsIcon: {
-    marginRight: 15,
+  dangerText: {
+    color: '#FF3B30',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
-  settingsText: {
-    fontSize: typography.sizes.md,
-    color: colors.text,
+  aboutText: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 4,
   }
 });
-
-export default SettingsScreen;

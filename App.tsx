@@ -4,6 +4,7 @@ import { StatusBar } from 'react-native';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initI18n } from './src/i18n';
 import { colors } from './src/theme/colors';
+import { AppProvider } from './src/store/AppContext';
 
 const App = () => {
   useEffect(() => {
@@ -12,8 +13,10 @@ const App = () => {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
-      <AppNavigator />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <AppProvider>
+        <AppNavigator />
+      </AppProvider>
     </SafeAreaProvider>
   );
 };

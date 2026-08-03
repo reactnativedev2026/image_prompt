@@ -1,21 +1,16 @@
 import React from 'react';
-import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { useTranslation } from 'react-i18next';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../theme/colors';
 
-import HomeScreen from '../screens/HomeScreen';
-import CategoriesScreen from '../screens/CategoriesScreen';
-import CardMakerScreen from '../screens/CardMakerScreen';
-import FavouritesScreen from '../screens/FavouritesScreen';
-import SettingsScreen from '../screens/SettingsScreen';
+import { GalleryScreen } from '../screens/GalleryScreen';
+import { ExploreScreen } from '../screens/ExploreScreen';
+import { FavoritesScreen } from '../screens/FavoritesScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
 const BottomTabNavigator = () => {
-  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (
@@ -24,43 +19,30 @@ const BottomTabNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName = '';
 
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Categories') {
-            iconName = focused ? 'grid' : 'grid-outline';
-          } else if (route.name === 'Create') {
-            return (
-              <View style={{
-                top: -15,
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: colors.primaryDark,
-                justifyContent: 'center',
-                alignItems: 'center',
-                elevation: 4,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 3,
-              }}>
-                <Icon name="add" size={32} color="#fff" />
-              </View>
-            );
-          } else if (route.name === 'Favourites') {
+          if (route.name === 'Gallery') {
+            iconName = focused ? 'image' : 'image-outline';
+          } else if (route.name === 'Explore') {
+            iconName = focused ? 'compass' : 'compass-outline';
+          } else if (route.name === 'Favorites') {
             iconName = focused ? 'heart' : 'heart-outline';
           } else if (route.name === 'Settings') {
-            iconName = focused ? 'settings' : 'settings-outline';
+            iconName = focused ? 'cog' : 'cog-outline';
           }
 
           return <Icon name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: colors.primaryDark,
-        tabBarInactiveTintColor: colors.textLight,
-        headerShown: false,
+        tabBarActiveTintColor: '#FFBF00',
+        tabBarInactiveTintColor: '#666666',
+        headerStyle: {
+          backgroundColor: '#FFFFFF',
+        },
+        headerTitleStyle: {
+          color: '#333333',
+        },
+        headerShadowVisible: false,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#EEEEEE',
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom + 10,
           paddingTop: 10,
@@ -68,29 +50,24 @@ const BottomTabNavigator = () => {
       })}
     >
       <Tab.Screen 
-        name="Home" 
-        component={HomeScreen} 
-        options={{ title: t('common.search') }} 
+        name="Gallery" 
+        component={GalleryScreen} 
+        options={{ title: 'Gallery' }} 
       />
       <Tab.Screen 
-        name="Categories" 
-        component={CategoriesScreen} 
-        options={{ title: 'Categories' }} 
+        name="Explore" 
+        component={ExploreScreen} 
+        options={{ title: 'Explore' }} 
       />
       <Tab.Screen 
-        name="Create" 
-        component={CardMakerScreen} 
-        options={{ title: 'Create' }} 
-      />
-      <Tab.Screen 
-        name="Favourites" 
-        component={FavouritesScreen} 
-        options={{ title: t('common.favourite') }} 
+        name="Favorites" 
+        component={FavoritesScreen} 
+        options={{ title: 'Favorites' }} 
       />
       <Tab.Screen 
         name="Settings" 
         component={SettingsScreen} 
-        options={{ title: t('settings.title') }} 
+        options={{ title: 'Settings' }} 
       />
     </Tab.Navigator>
   );
