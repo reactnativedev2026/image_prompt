@@ -15,12 +15,12 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const AppNavigator = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator 
+      <Stack.Navigator
         initialRouteName="Main"
         screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="Main" component={BottomTabNavigator} />
-        <Stack.Screen name="PromptDetail" component={PromptDetailScreen} options={{ headerShown: true, title: 'Details', headerBackTitle: 'Back', headerTintColor: '#333333' }} />
+        <Stack.Screen name="PromptDetail" component={PromptDetailScreen} options={{ headerShown: false, title: 'Details', headerBackTitle: 'Back', headerTintColor: '#333333' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
