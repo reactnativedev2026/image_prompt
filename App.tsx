@@ -13,11 +13,11 @@ const App = () => {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
-      <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        <AppProvider>
-          <AppNavigator />
-        </AppProvider>
-      </SafeAreaView>
+      {/* <SafeAreaView edges={['top']} style={{ flex: 1 }}> */}
+      <AppProvider>
+        <AppNavigator />
+      </AppProvider>
+      {/* </SafeAreaView> */}
     </SafeAreaProvider>
   );
 };

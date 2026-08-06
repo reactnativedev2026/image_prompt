@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,7 @@ import { PromptItem } from '../data/mockPrompts';
 import { Linking } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
-const IMAGE_HEIGHT = height * 0.48;
+const IMAGE_HEIGHT = height * 0.55;
 
 const TOOL_URLS: Record<string, string> = {
   'Gemini': 'https://gemini.google.com/',
@@ -34,18 +34,18 @@ const TOOL_URLS: Record<string, string> = {
   'ChatGPT': 'https://chat.openai.com/',
 };
 
-const CATEGORY_META: Record<string, { color: string; icon: string }> = {
-  Cyberpunk:  { color: '#7C3AED', icon: 'city-variant-outline' },
-  'Sci-Fi':   { color: '#0284C7', icon: 'rocket-launch-outline' },
-  Fantasy:    { color: '#059669', icon: 'magic-staff' },
-  Minimalist: { color: '#D97706', icon: 'minus-circle-outline' },
-  Steampunk:  { color: '#B45309', icon: 'cog-outline' },
-  Portrait:   { color: '#DB2777', icon: 'account-circle-outline' },
+const CATEGORY_META: Record<string, { color: string; icon: string; bg: string }> = {
+  Cyberpunk: { color: '#8B5CF6', icon: 'robot-outline', bg: '#F5F3FF' },
+  'Sci-Fi': { color: '#0EA5E9', icon: 'rocket-launch-outline', bg: '#F0F9FF' },
+  Fantasy: { color: '#10B981', icon: 'creation-outline', bg: '#ECFDF5' },
+  Minimalist: { color: '#F59E0B', icon: 'triangle-outline', bg: '#FFFBEB' },
+  Steampunk: { color: '#D97706', icon: 'cog-outline', bg: '#FEF3C7' },
+  Portrait: { color: '#EC4899', icon: 'account-outline', bg: '#FDF2F8' },
 };
 
 const showCopiedToast = () => {
   if (Platform.OS === 'android') {
-    ToastAndroid.show('Prompt copied!', ToastAndroid.SHORT);
+    ToastAndroid.show('✨ Copied to clipboard!', ToastAndroid.SHORT);
   } else {
     Alert.alert('Copied!', 'Prompt copied to clipboard.');
   }
@@ -58,7 +58,7 @@ export const PromptDetailScreen = () => {
   const { defaultTool, isFavorite, toggleFavorite } = useAppContext();
   const insets = useSafeAreaInsets();
 
-  const meta = CATEGORY_META[item.category] || { color: '#FF69B4', icon: 'image-outline' };
+  const meta = CATEGORY_META[item.category] || { color: '#FF69B4', icon: 'tag-outline', bg: '#FFF0F5' };
 
   const handleCopy = () => {
     Clipboard.setString(item.promptText);
@@ -83,34 +83,39 @@ export const PromptDetailScreen = () => {
 
   return (
     <View style={styles.root}>
+      {/* ══════════ GLOW GRADIENT IN BACKGROUND ══════════ */}
+      <View style={[styles.bgGlow, { backgroundColor: meta.color + '12' }]} />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
-        bounces
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 24, 32) }}
       >
-        {/* ══════════ HERO IMAGE ══════════ */}
-        <View style={styles.heroBox}>
-          <Image source={{ uri: item.imageUrl }} style={styles.heroImage} />
+        {/* ══════════ HERO CANVAS ══════════ */}
+        <View style={styles.heroContainer}>
+          {/* Blurred Background Image for the sides */}
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.heroImageBlurBackground}
+            blurRadius={Platform.OS === 'ios' ? 12 : 8}
+          />
 
-          {/* Dark scrim at bottom for blending */}
-          <View style={styles.scrim} />
+          {/* Clear Contain Image in Foreground (9:16 full image) */}
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.heroImageForeground}
+          />
 
-          {/* Back button */}
+          {/* Floating Actions on Image */}
           <TouchableOpacity
-            style={[styles.floatBtn, { top: insets.top + 12, left: 16 }]}
+            style={[styles.glassBtn, { top: insets.top + 16, left: 16 }]}
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Icon name="arrow-left" size={22} color="#FFF" />
+            <Icon name="arrow-left" size={24} color="#FFF" />
           </TouchableOpacity>
 
-          {/* Fav button */}
           <TouchableOpacity
-            style={[
-              styles.floatBtn,
-              { top: insets.top + 12, right: 16 },
-              favored && styles.floatBtnFaved,
-            ]}
+            style={[styles.glassBtn, { top: insets.top + 16, right: 16 }, favored && styles.glassBtnFaved]}
             onPress={() => toggleFavorite(item)}
             activeOpacity={0.8}
           >
@@ -121,62 +126,61 @@ export const PromptDetailScreen = () => {
             />
           </TouchableOpacity>
 
-          {/* Category chip on the image */}
-          <View style={[styles.heroCategoryChip, { backgroundColor: meta.color }]}>
-            <Icon name={meta.icon} size={13} color="#FFF" />
-            <Text style={styles.heroCategoryText}>{item.category}</Text>
+          {/* Neo-morphic Category Badge */}
+          <View style={[styles.neoBadge, { backgroundColor: meta.bg }]}>
+            <Icon name={meta.icon} size={15} color={meta.color} />
+            <Text style={[styles.neoBadgeText, { color: meta.color }]}>{item.category}</Text>
           </View>
         </View>
 
-        {/* ══════════ CONTENT CARD ══════════ */}
-        <View style={styles.card}>
-
-          {/* ── Top handle bar ── */}
-          <View style={styles.handleBar} />
-
-          {/* ── Copy & Share row — directly above prompt ── */}
-          <View style={styles.actionHeader}>
-            <Text style={styles.promptLabel}>📝  AI Prompt</Text>
-            <View style={styles.actionPill}>
-              <TouchableOpacity style={styles.pillBtn} onPress={handleCopy} activeOpacity={0.75}>
-                <Icon name="content-copy" size={15} color={meta.color} />
-                <Text style={[styles.pillBtnText, { color: meta.color }]}>Copy</Text>
-              </TouchableOpacity>
-              <View style={styles.pillSep} />
-              <TouchableOpacity style={styles.pillBtn} onPress={handleShare} activeOpacity={0.75}>
-                <Icon name="share-variant-outline" size={15} color="#0284C7" />
-                <Text style={[styles.pillBtnText, { color: '#0284C7' }]}>Share</Text>
-              </TouchableOpacity>
-            </View>
+        {/* ══════════ GLASS CARD CONTENT ══════════ */}
+        <View style={styles.contentContainer}>
+          {/* Card Label and Title */}
+          <View style={styles.titleRow}>
+            <Text style={styles.sectionLabel}>PROMPT ENGINE</Text>
+            <Text style={styles.titleText}>Prompt Masterpiece</Text>
           </View>
 
-          {/* ── Prompt text ── */}
-          <View style={[styles.promptBox, { borderColor: meta.color + '30' }]}>
+          {/* Elegant Prompt Box with a left border accent */}
+          <View style={[styles.promptBox, { borderLeftColor: meta.color }]}>
+            <View style={styles.promptHeader}>
+              <Icon name="format-quote-close" size={26} color={meta.color + '40'} />
+              <View style={styles.actionGroup}>
+                <TouchableOpacity
+                  style={[styles.circleActionBtn, { backgroundColor: meta.color + '15' }]}
+                  onPress={handleCopy}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="content-copy" size={16} color={meta.color} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.circleActionBtn}
+                  onPress={handleShare}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="share-variant-outline" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
             <Text style={styles.promptText}>{item.promptText}</Text>
           </View>
 
-          {/* ── "Use with" heading ── */}
-          <Text style={styles.useWithLabel}>Use this prompt with</Text>
-
-          {/* ── Primary CTA ── */}
-          <TouchableOpacity
-            style={[styles.ctaBtn, { backgroundColor: meta.color, shadowColor: meta.color }]}
-            onPress={handleOpenTool}
-            activeOpacity={0.87}
-          >
-            <Icon name="lightning-bolt" size={20} color="#FFF" />
-            <Text style={styles.ctaText}>Open in {defaultTool}</Text>
-            <View style={styles.ctaArrow}>
-              <Icon name="arrow-right" size={16} color={meta.color} />
+          {/* Interactive Tool Launcher */}
+          <View style={styles.launcherSection}>
+            <View style={styles.launcherTextWrap}>
+              <Text style={styles.launcherTitle}>Generate Now</Text>
+              <Text style={styles.launcherSub}>Copies & launches your active engine</Text>
             </View>
-          </TouchableOpacity>
 
-          {/* ── Info note ── */}
-          <View style={styles.noteRow}>
-            <Icon name="information-outline" size={13} color="#CCC" />
-            <Text style={styles.noteText}>
-              Prompt auto-copies to clipboard when you tap the button above.
-            </Text>
+            <TouchableOpacity
+              style={[styles.launchBtn, { backgroundColor: meta.color, shadowColor: meta.color }]}
+              onPress={handleOpenTool}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.launchBtnText}>Launch {defaultTool}</Text>
+              <Icon name="arrow-right-circle" size={24} color="#FFF" />
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -185,191 +189,200 @@ export const PromptDetailScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FAFAFF' },
+  root: { flex: 1, backgroundColor: '#FAF9FF' },
 
-  // ── Hero ──────────────────────────────────────
-  heroBox: {
-    width: '100%',
-    height: IMAGE_HEIGHT,
-    backgroundColor: '#DDD',
+  // Ambient glow
+  bgGlow: {
+    position: 'absolute',
+    top: -100,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    transform: [{ scale: 1.5 }],
   },
-  heroImage: {
+
+  // Hero Container
+  heroContainer: {
+    width: width,
+    height: IMAGE_HEIGHT,
+    position: 'relative',
+    backgroundColor: '#1E1B4B',
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    overflow: 'hidden',
+    shadowColor: '#1E1B4B',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  heroImageBlurBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+    opacity: 0.65,
   },
-  scrim: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    // Simple semi-transparent scrim
-    backgroundColor: 'rgba(0,0,0,0.22)',
+  heroImageForeground: {
+    alignSelf: 'center',
+    width: (IMAGE_HEIGHT * 9) / 16, // perfect 9:16 width based on height
+    height: '100%',
+    resizeMode: 'cover',
+    // zIndex: 2,
   },
-  floatBtn: {
+  glassBtn: {
     position: 'absolute',
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(0,0,0,0.40)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
-  floatBtnFaved: {
-    backgroundColor: 'rgba(255,77,109,0.25)',
-    borderColor: '#FF4D6D',
+  glassBtnFaved: {
+    backgroundColor: '#FF4D6D',
+    borderColor: '#FF758F',
   },
-  heroCategoryChip: {
+  neoBadge: {
     position: 'absolute',
     bottom: 20,
-    left: 18,
+    left: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
-    gap: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  heroCategoryText: {
-    color: '#FFF',
+  neoBadgeText: {
     fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.4,
-    marginLeft: 4,
+    letterSpacing: 0.8,
+    marginLeft: 6,
+    textTransform: 'uppercase',
   },
 
-  // ── Card ──────────────────────────────────────
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -28,
+  // Content
+  contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.07,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: -6 },
-    elevation: 12,
+    paddingTop: 24,
   },
-  handleBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E0E0E0',
-    alignSelf: 'center',
+  titleRow: {
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#8E9AA6',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  titleText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.5,
+  },
+
+  // Prompt Box
+  promptBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#ECECF3',
+    borderLeftWidth: 5,
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.03,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
     marginBottom: 20,
   },
-
-  // ── Action header (above prompt) ──────────────
-  actionHeader: {
+  promptHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
-  promptLabel: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1A1A2E',
-  },
-  actionPill: {
+  actionGroup: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F3FF',
-    borderRadius: 12,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: '#EAE8F8',
+    gap: 8,
   },
-  pillBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    gap: 4,
-    borderRadius: 9,
-  },
-  pillBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginLeft: 2,
-  },
-  pillSep: {
-    width: 1,
-    height: 18,
-    backgroundColor: '#DDD8F8',
-    marginHorizontal: 2,
-  },
-
-  // ── Prompt box ────────────────────────────────
-  promptBox: {
-    backgroundColor: '#FAFAFF',
+  circleActionBtn: {
+    width: 36,
+    height: 36,
     borderRadius: 18,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1.5,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   promptText: {
     fontSize: 15,
-    color: '#2D2D3A',
+    color: '#334155',
     lineHeight: 24,
     fontWeight: '500',
   },
 
-  // ── CTA ──────────────────────────────────────
-  useWithLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#BBBBBB',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  ctaBtn: {
+  // Launcher Panel
+  launcherSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
-    paddingVertical: 17,
-    paddingLeft: 22,
-    paddingRight: 14,
-    marginBottom: 16,
-    shadowOpacity: 0.30,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 7 },
-    elevation: 8,
-    gap: 10,
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#ECECF3',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
-  ctaText: {
-    color: '#FFF',
+  launcherTextWrap: {
+    flex: 1,
+    marginRight: 12,
+  },
+  launcherTitle: {
     fontSize: 15,
     fontWeight: '800',
-    flex: 1,
+    color: '#0F172A',
+    marginBottom: 2,
   },
-  ctaArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // ── Note ─────────────────────────────────────
-  noteRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-  },
-  noteText: {
-    flex: 1,
+  launcherSub: {
     fontSize: 11,
-    color: '#CCCCCC',
-    lineHeight: 17,
-    marginLeft: 4,
+    color: '#64748B',
+    lineHeight: 15,
+  },
+  launchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    gap: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  launchBtnText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

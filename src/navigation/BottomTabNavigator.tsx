@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
 import { GalleryScreen } from '../screens/GalleryScreen';
 import { ExploreScreen } from '../screens/ExploreScreen';
@@ -12,14 +13,11 @@ import { SettingsScreen } from '../screens/SettingsScreen';
 const Tab = createBottomTabNavigator();
 
 const TABS = [
-  { name: 'Gallery',   label: 'Gallery',   icon: 'image-multiple',        iconOff: 'image-multiple-outline' },
-  { name: 'Explore',   label: 'Explore',   icon: 'compass',               iconOff: 'compass-outline' },
-  { name: 'Favorites', label: 'Saved',     icon: 'heart',                 iconOff: 'heart-outline' },
-  { name: 'Settings',  label: 'Settings',  icon: 'cog',                   iconOff: 'cog-outline' },
+  { name: 'Gallery', label: 'Gallery', icon: 'image-multiple', iconOff: 'image-multiple-outline' },
+  { name: 'Explore', label: 'Explore', icon: 'compass', iconOff: 'compass-outline' },
+  { name: 'Favorites', label: 'Saved', icon: 'heart', iconOff: 'heart-outline' },
+  { name: 'Settings', label: 'Settings', icon: 'cog', iconOff: 'cog-outline' },
 ];
-
-const ACTIVE_COLOR = '#FF69B4';
-const INACTIVE_COLOR = '#BBBBBB';
 
 const BottomTabNavigator = () => {
   const insets = useSafeAreaInsets();
@@ -31,10 +29,24 @@ const BottomTabNavigator = () => {
         tabBarIcon: ({ focused, size }) => {
           const tab = TABS.find(t => t.name === route.name)!;
           const iconName = focused ? tab.icon : tab.iconOff;
-          const color = focused ? ACTIVE_COLOR : INACTIVE_COLOR;
+
+          if (focused) {
+            // Apply gradient wrapper to the active icon
+            return (
+              <LinearGradient
+                colors={['#FF69B4', '#7C3AED']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.iconWrapActiveGradient}
+              >
+                <Icon name={iconName} size={size - 2} color="#FFFFFF" />
+              </LinearGradient>
+            );
+          }
+
           return (
-            <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-              <Icon name={iconName} size={size - 2} color={color} />
+            <View style={styles.iconWrap}>
+              <Icon name={iconName} size={size - 2} color="#BBBBBB" />
             </View>
           );
         },
@@ -49,19 +61,11 @@ const BottomTabNavigator = () => {
           );
         },
 
-        tabBarActiveTintColor: ACTIVE_COLOR,
-        tabBarInactiveTintColor: INACTIVE_COLOR,
+        tabBarActiveTintColor: '#7C3AED',
+        tabBarInactiveTintColor: '#BBBBBB',
 
-        // ── Header — shown so top safe area is respected ──────────
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: '#FAFAFF',
-          height: 0,           // zero-height header: just provides top safe area space
-          shadowColor: 'transparent',
-          elevation: 0,
-        },
-        headerTitle: () => null,  // empty title
-        headerShadowVisible: false,
+        // ── Header — fully hidden, no phantom height on Android ───
+        headerShown: false,
 
         // ── Bottom tab bar ────────────────────────────────────────
         tabBarStyle: {
@@ -83,10 +87,10 @@ const BottomTabNavigator = () => {
           key={tab.name}
           name={tab.name}
           component={
-            tab.name === 'Gallery'   ? GalleryScreen   :
-            tab.name === 'Explore'   ? ExploreScreen   :
-            tab.name === 'Favorites' ? FavoritesScreen :
-                                       SettingsScreen
+            tab.name === 'Gallery' ? GalleryScreen :
+              tab.name === 'Explore' ? ExploreScreen :
+                tab.name === 'Favorites' ? FavoritesScreen :
+                  SettingsScreen
           }
         />
       ))}
@@ -102,18 +106,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconWrapActive: {
-    backgroundColor: '#FF69B418',
+  iconWrapActiveGradient: {
+    width: 44,
+    height: 28,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tabLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: INACTIVE_COLOR,
+    color: '#BBBBBB',
     marginTop: 2,
     marginBottom: Platform.OS === 'ios' ? 0 : 2,
   },
   tabLabelActive: {
-    color: ACTIVE_COLOR,
+    color: '#7C3AED',
+    fontWeight: '700',
   },
 });
 

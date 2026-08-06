@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useAppContext } from '../store/AppContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TOOLS = [
   'Gemini', 'Canva', 'Bing Image Creator',
@@ -17,19 +18,19 @@ const TOOLS = [
 ];
 
 const TOOL_ICONS: Record<string, { icon: string; color: string }> = {
-  'Gemini':              { icon: 'google',              color: '#4285F4' },
-  'Canva':               { icon: 'palette',             color: '#7D2AE8' },
-  'Bing Image Creator':  { icon: 'microsoft-bing',      color: '#008373' },
-  'Leonardo AI':         { icon: 'brush',               color: '#FF7043' },
-  'Ideogram':            { icon: 'format-text',         color: '#263238' },
-  'Playground':          { icon: 'controller-classic',  color: '#EC407A' },
-  'Adobe Firefly':       { icon: 'fire',                color: '#E53935' },
-  'ChatGPT':             { icon: 'robot-outline',       color: '#10A37F' },
+  'Gemini': { icon: 'google', color: '#4285F4' },
+  'Canva': { icon: 'palette', color: '#7D2AE8' },
+  'Bing Image Creator': { icon: 'microsoft-bing', color: '#008373' },
+  'Leonardo AI': { icon: 'brush', color: '#FF7043' },
+  'Ideogram': { icon: 'format-text', color: '#263238' },
+  'Playground': { icon: 'controller-classic', color: '#EC407A' },
+  'Adobe Firefly': { icon: 'fire', color: '#E53935' },
+  'ChatGPT': { icon: 'robot-outline', color: '#10A37F' },
 };
 
 export const SettingsScreen = () => {
   const { defaultTool, setDefaultTool, clearFavorites } = useAppContext();
-
+  const insets = useSafeAreaInsets()
   const handleClearFavorites = () => {
     Alert.alert(
       'Clear Favorites',
@@ -42,7 +43,7 @@ export const SettingsScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { paddingTop: insets.top }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>⚙️ Settings</Text>
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
 
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 10,
     paddingBottom: 10,
   },
   headerTitle: {

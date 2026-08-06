@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,59 +7,101 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppContext } from '../store/AppContext';
 import { PromptItem } from '../data/mockPrompts';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 52) / 2;
+const CARD_WIDTH = (width - 34) / 2;
+// Restored to the original height (4:3 ratio: width * 4 / 3)
 const IMAGE_HEIGHT = (CARD_WIDTH * 4) / 3;
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Cyberpunk: '#7C3AED',
-  'Sci-Fi': '#0284C7',
-  Fantasy: '#059669',
-  Minimalist: '#D97706',
-  Steampunk: '#B45309',
-  Portrait: '#DB2777',
+// Premium Animated Favorite Card component with multicolor gradient border
+const AnimatedFavoriteCard = ({ item, index, navigation, toggleFavorite }: {
+  item: PromptItem;
+  index: number;
+  navigation: any;
+  toggleFavorite: any;
+}) => {
+  const scale = React.useRef(new Animated.Value(0.92)).current;
+  const opacity = React.useRef(new Animated.Value(0)).current;
+
+  // Generate fake high-quality view counts based on item ID for premium vibe
+  const fakeViews = React.useMemo(() => {
+    const idNum = parseInt(item.id, 10) || 1;
+    return (idNum * 142 + 250) % 900 + 100;
+  }, [item.id]);
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 400,
+        delay: Math.min(index * 60, 600),
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        delay: Math.min(index * 60, 600),
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={[styles.cardContainer, { opacity, transform: [{ scale }] }]}>
+      {/* Dynamic Multicolor Gradient Border */}
+      <LinearGradient
+        colors={['#FF69B4', '#7C3AED', '#3B82F6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBorder}
+      >
+        <TouchableOpacity
+          activeOpacity={0.92}
+          onPress={() => navigation.navigate('PromptDetail', { item })}
+          style={styles.cardInner}
+        >
+          <View style={styles.imageWrapper}>
+            <Image source={{ uri: item.imageUrl }} style={styles.image} />
+            
+            {/* Glass-styled Favorite Button */}
+            <TouchableOpacity
+              style={styles.favButton}
+              activeOpacity={0.8}
+              onPress={() => toggleFavorite(item)}
+            >
+              <Icon name="heart" size={16} color="#FF4D6D" />
+            </TouchableOpacity>
+
+            {/* Premium Bottom Bar on Image */}
+            <View style={styles.imageFooterOverlay}>
+              <View style={styles.viewCountWrap}>
+                <Icon name="eye-outline" size={13} color="#FFFFFF" />
+                <Text style={styles.viewCountText}>{fakeViews}</Text>
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </LinearGradient>
+    </Animated.View>
+  );
 };
 
 export const FavoritesScreen = () => {
   const navigation = useNavigation<any>();
   const { favorites, toggleFavorite } = useAppContext();
-
-  const renderItem = ({ item }: { item: PromptItem }) => {
-    const catColor = CATEGORY_COLORS[item.category] || '#FF69B4';
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.9}
-        onPress={() => navigation.navigate('PromptDetail', { item })}
-      >
-        <View style={styles.imageWrapper}>
-          <Image source={{ uri: item.imageUrl }} style={styles.image} />
-          <TouchableOpacity
-            style={styles.favButton}
-            activeOpacity={0.8}
-            onPress={() => toggleFavorite(item)}
-          >
-            <Icon name="heart" size={15} color="#FF69B4" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.cardBody}>
-          <View style={[styles.catBadge, { backgroundColor: catColor + '18' }]}>
-            <Text style={[styles.catBadgeText, { color: catColor }]}>{item.category}</Text>
-          </View>
-          <Text style={styles.cardPrompt} numberOfLines={2}>{item.promptText}</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -91,7 +133,14 @@ export const FavoritesScreen = () => {
         <FlatList
           data={favorites}
           keyExtractor={item => item.id}
-          renderItem={renderItem}
+          renderItem={({ item, index }) => (
+            <AnimatedFavoriteCard
+              item={item}
+              index={index}
+              navigation={navigation}
+              toggleFavorite={toggleFavorite}
+            />
+          )}
           numColumns={2}
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.gridContent}
@@ -103,73 +152,88 @@ export const FavoritesScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFF' },
+  container: { flex: 1, backgroundColor: '#FAF9FF' },
 
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
     paddingBottom: 12,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1A1A2E',
+    color: '#0F172A',
     letterSpacing: -0.3,
   },
   headerSub: {
     fontSize: 13,
-    color: '#999',
+    color: '#64748B',
     marginTop: 2,
   },
 
-  gridContent: { paddingHorizontal: 20, paddingBottom: 30 },
-  row: { justifyContent: 'space-between' },
+  gridContent: { paddingHorizontal: 12, paddingBottom: 30 },
+  row: { justifyContent: 'space-between', gap: 10 },
 
-  card: {
+  // Card Outer Container
+  cardContainer: {
     width: CARD_WIDTH,
-    backgroundColor: '#FFFFFF',
+    marginBottom: 10,
+  },
+  // Multicolor Gradient Border Frame
+  gradientBorder: {
+    padding: 2.5, // thickness of gradient border
     borderRadius: 18,
-    marginBottom: 16,
-    overflow: 'hidden',
-    shadowColor: '#DB2777',
-    shadowOpacity: 0.07,
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.12,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: { width: 0, height: 6 },
     elevation: 4,
+  },
+  cardInner: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   imageWrapper: {
     width: '100%',
     height: IMAGE_HEIGHT,
-    backgroundColor: '#F5F0F8',
+    backgroundColor: '#F1F5F9',
+    position: 'relative',
   },
   image: { width: '100%', height: '100%', resizeMode: 'cover' },
+  
   favButton: {
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-    borderRadius: 14,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    borderRadius: 10,
     padding: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    zIndex: 10,
   },
-  cardBody: { padding: 10 },
-  catBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginBottom: 5,
+
+  // Image Footer View Count Overlay
+  imageFooterOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 36,
+    paddingHorizontal: 10,
+    justifyContent: 'flex-end',
+    paddingBottom: 8,
+    backgroundColor: 'transparent',
   },
-  catBadgeText: {
-    fontSize: 9,
+  viewCountWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewCountText: {
+    color: '#FFFFFF',
+    fontSize: 10,
     fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  cardPrompt: {
-    fontSize: 12,
-    color: '#333',
-    lineHeight: 17,
-    fontWeight: '500',
   },
 
   // Empty state
@@ -196,12 +260,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#1A1A2E',
+    color: '#0F172A',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#999',
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 21,
     marginBottom: 28,
@@ -227,3 +291,4 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 });
+export default FavoritesScreen;

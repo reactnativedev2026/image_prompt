@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const TOOLS = [
@@ -14,6 +15,7 @@ const TOOLS = [
 ];
 
 export const ExploreScreen = () => {
+  const insets = useSafeAreaInsets()
   const renderItem = ({ item }: { item: typeof TOOLS[0] }) => (
     <TouchableOpacity
       style={styles.card}
@@ -34,7 +36,7 @@ export const ExploreScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>🚀 AI Tools</Text>
@@ -58,7 +60,7 @@ const styles = StyleSheet.create({
 
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 10,
     paddingBottom: 14,
   },
   headerTitle: {
