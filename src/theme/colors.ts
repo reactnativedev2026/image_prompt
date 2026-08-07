@@ -1,17 +1,18 @@
 export const colors = {
-  primary: '#FFB6C1', // Light Pink
-  primaryLight: '#FFC0CB', // Pink
-  primaryDark: '#FF69B4', // Hot Pink
-  background: '#FFF0F5', // Lavender Blush (very light pinkish white)
-  surface: '#FFFFFF', // White
-  text: '#333333', // Dark Gray for readability
-  textLight: '#666666', // Medium Gray
-  border: '#F0E6EA', // Light border
-  error: '#FF4C4C',
-  success: '#4CAF50',
+  primary: '#A15DFB', // Neon purple
+  primaryLight: '#B882FF', // Lighter neon purple
+  primaryDark: '#7B2CBF', // Darker neon purple
+  background: '#09090F', // Dark near-black base background
+  surface: '#121222', // Dark card surface
+  surfaceLight: '#1B1B32', // Slightly lighter dark surface
+  text: '#FFFFFF', // White text
+  textLight: '#94A3B8', // Slate grey description/subtitles
+  border: '#1F1F35', // Dark borders
+  error: '#FF4D6D',
+  success: '#10B981',
   transparent: 'transparent',
   // Icon colors
-  favourite: '#FF4C4C',
-  share: '#4A90E2',
-  copy: '#4CAF50',
+  favourite: '#FF4D6D',
+  share: '#A15DFB',
+  copy: '#10B981',
 };

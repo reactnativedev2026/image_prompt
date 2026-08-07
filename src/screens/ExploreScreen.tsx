@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { colors } from '../theme/colors';
 
 const TOOLS = [
   { id: '1', name: 'Gemini', url: 'https://gemini.google.com/', description: 'Google\'s multimodal AI model', icon: 'google', color: '#4285F4' },
@@ -15,7 +16,7 @@ const TOOLS = [
 ];
 
 export const ExploreScreen = () => {
-  const insets = useSafeAreaInsets()
+  const insets = useSafeAreaInsets();
   const renderItem = ({ item }: { item: typeof TOOLS[0] }) => (
     <TouchableOpacity
       style={styles.card}
@@ -56,7 +57,7 @@ export const ExploreScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFF' },
+  container: { flex: 1, backgroundColor: colors.background },
 
   header: {
     paddingHorizontal: 20,
@@ -66,12 +67,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1A1A2E',
+    color: '#FFFFFF',
     letterSpacing: -0.3,
   },
   headerSub: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textLight,
     marginTop: 2,
   },
 
@@ -86,16 +87,11 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#121222',
     borderRadius: 18,
     padding: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
     borderWidth: 1,
-    borderColor: '#F4F2FF',
+    borderColor: '#1F1F35',
   },
   iconWrap: {
     width: 50,
@@ -112,12 +108,12 @@ const styles = StyleSheet.create({
   cardName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A2E',
+    color: '#FFFFFF',
     marginBottom: 3,
   },
   cardDesc: {
     fontSize: 12,
-    color: '#888',
+    color: colors.textLight,
     lineHeight: 17,
   },
   arrowWrap: {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -6,41 +6,44 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
-  Share,
+  Share as RNShare,
   Dimensions,
   ToastAndroid,
   Platform,
   Alert,
+  FlatList,
+  Animated,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppContext } from '../store/AppContext';
-import { PromptItem } from '../data/mockPrompts';
-import { Linking } from 'react-native';
+import { mockPrompts, PromptItem } from '../data/mockPrompts';
+import LinearGradient from 'react-native-linear-gradient';
+import { colors } from '../theme/colors';
 
-const { width, height } = Dimensions.get('window');
-const IMAGE_HEIGHT = height * 0.55;
+const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const TOOL_URLS: Record<string, string> = {
-  'Gemini': 'https://gemini.google.com/',
-  'Canva': 'https://www.canva.com/ai-image-generator/',
-  'Bing Image Creator': 'https://www.bing.com/create',
-  'Leonardo AI': 'https://leonardo.ai/',
-  'Ideogram': 'https://ideogram.ai/',
-  'Playground': 'https://playground.com/',
-  'Adobe Firefly': 'https://firefly.adobe.com/',
-  'ChatGPT': 'https://chat.openai.com/',
-};
-
-const CATEGORY_META: Record<string, { color: string; icon: string; bg: string }> = {
-  Cyberpunk: { color: '#8B5CF6', icon: 'robot-outline', bg: '#F5F3FF' },
-  'Sci-Fi': { color: '#0EA5E9', icon: 'rocket-launch-outline', bg: '#F0F9FF' },
-  Fantasy: { color: '#10B981', icon: 'creation-outline', bg: '#ECFDF5' },
-  Minimalist: { color: '#F59E0B', icon: 'triangle-outline', bg: '#FFFBEB' },
-  Steampunk: { color: '#D97706', icon: 'cog-outline', bg: '#FEF3C7' },
-  Portrait: { color: '#EC4899', icon: 'account-outline', bg: '#FDF2F8' },
+const getPromptDisplayMeta = (id: string, category: string) => {
+  const metas: Record<string, { title: string; rating: string }> = {
+    '1': { title: 'Cyberpunk City', rating: '4.8K' },
+    '7': { title: 'Cozy Cabin', rating: '3.2K' },
+    '8': { title: 'Astronaut', rating: '5.6K' },
+    '2': { title: 'Fantasy Portrait', rating: '4.1K' },
+    '9': { title: 'Night Drive', rating: '2.9K' },
+    '10': { title: 'Floating Island Castle', rating: '3.7K' },
+    '11': { title: 'Cute Robot', rating: '2.3K' },
+    '12': { title: 'Mountain Lake', rating: '3.1K' },
+    '13': { title: 'Anime Girl', rating: '4.4K' },
+    '14': { title: 'Ice Dragon', rating: '3.5K' },
+    '15': { title: 'Steam Train', rating: '3.9K' },
+    '16': { title: 'Pocket Watch', rating: '3.4K' },
+    '6': { title: 'Cyber Geisha', rating: '4.2K' },
+    '17': { title: 'Space Station', rating: '5.1K' },
+    '18': { title: 'Botanical Leaf', rating: '2.8K' },
+  };
+  return metas[id] || { title: category + ' Item', rating: '3.0K' };
 };
 
 const showCopiedToast = () => {
@@ -51,338 +54,397 @@ const showCopiedToast = () => {
   }
 };
 
-export const PromptDetailScreen = () => {
-  const route = useRoute<any>();
-  const navigation = useNavigation<any>();
-  const { item } = route.params as { item: PromptItem };
-  const { defaultTool, isFavorite, toggleFavorite } = useAppContext();
-  const insets = useSafeAreaInsets();
-
-  const meta = CATEGORY_META[item.category] || { color: '#FF69B4', icon: 'tag-outline', bg: '#FFF0F5' };
+const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any; navigation: any }) => {
+  const { isFavorite, toggleFavorite } = useAppContext();
+  const meta = getPromptDisplayMeta(item.id, item.category);
+  const favored = isFavorite(item.id);
 
   const handleCopy = () => {
     Clipboard.setString(item.promptText);
     showCopiedToast();
   };
 
+  const handleCopyNegative = () => {
+    Clipboard.setString("blurry, low quality, distorted, bad anatomy, deformed, extra limbs, text, watermark, logo, signature");
+    showCopiedToast();
+  };
+
   const handleShare = async () => {
     try {
-      await Share.share({ message: `✨ AI Prompt:\n\n${item.promptText}` });
+      await RNShare.share({ message: `✨ AI Prompt:\n\n${item.promptText}` });
     } catch (e: any) {
       console.error(e.message);
     }
   };
 
-  const handleOpenTool = () => {
-    handleCopy();
-    const url = TOOL_URLS[defaultTool] || TOOL_URLS['Gemini'];
-    Linking.openURL(url);
-  };
-
-  const favored = isFavorite(item.id);
+  // Adjust scrollable content height to accommodate header & footer panels
+  const contentHeight = SCREEN_HEIGHT - insets.top - insets.bottom - 52 - 80;
 
   return (
-    <View style={styles.root}>
-      {/* ══════════ GLOW GRADIENT IN BACKGROUND ══════════ */}
-      <View style={[styles.bgGlow, { backgroundColor: meta.color + '12' }]} />
+    <View style={[styles.reelItemContainer, { height: SCREEN_HEIGHT }]}>
+      {/* ── Custom Top Header Bar ── */}
+      <View style={[styles.header, { marginTop: insets.top }]}>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
+          <Icon name="chevron-left" size={32} color="#FFF" />
+        </TouchableOpacity>
+
+        <View style={styles.headerRightActions}>
+          <TouchableOpacity style={styles.headerBtn} onPress={() => toggleFavorite(item)}>
+            <Icon
+              name={favored ? 'heart' : 'heart-outline'}
+              size={24}
+              color={favored ? '#A15DFB' : '#FFF'}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn}>
+            <Icon name="dots-vertical" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 24, 32) }}
+        contentContainerStyle={styles.scrollContent}
+        style={{ height: contentHeight }}
       >
-        {/* ══════════ HERO CANVAS ══════════ */}
-        <View style={styles.heroContainer}>
-          {/* Blurred Background Image for the sides */}
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={styles.heroImageBlurBackground}
-            blurRadius={Platform.OS === 'ios' ? 12 : 8}
-          />
-
-          {/* Clear Contain Image in Foreground (9:16 full image) */}
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={styles.heroImageForeground}
-          />
-
-          {/* Floating Actions on Image */}
-          <TouchableOpacity
-            style={[styles.glassBtn, { top: insets.top + 16, left: 16 }]}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.8}
-          >
-            <Icon name="arrow-left" size={24} color="#FFF" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.glassBtn, { top: insets.top + 16, right: 16 }, favored && styles.glassBtnFaved]}
-            onPress={() => toggleFavorite(item)}
-            activeOpacity={0.8}
-          >
-            <Icon
-              name={favored ? 'heart' : 'heart-outline'}
-              size={22}
-              color={favored ? '#FF4D6D' : '#FFF'}
-            />
-          </TouchableOpacity>
-
-          {/* Neo-morphic Category Badge */}
-          <View style={[styles.neoBadge, { backgroundColor: meta.bg }]}>
-            <Icon name={meta.icon} size={15} color={meta.color} />
-            <Text style={[styles.neoBadgeText, { color: meta.color }]}>{item.category}</Text>
-          </View>
+        {/* ── Main Hero Image Box ── */}
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: item.imageUrl }} style={styles.heroImage} />
         </View>
 
-        {/* ══════════ GLASS CARD CONTENT ══════════ */}
-        <View style={styles.contentContainer}>
-          {/* Card Label and Title */}
-          <View style={styles.titleRow}>
-            <Text style={styles.sectionLabel}>PROMPT ENGINE</Text>
-            <Text style={styles.titleText}>Prompt Masterpiece</Text>
+        {/* ── Title ── */}
+        <Text style={styles.titleText}>{meta.title}</Text>
+
+        {/* ── Categories/Tags ── */}
+        <View style={styles.tagsContainer}>
+          <View style={styles.tagPill}><Text style={styles.tagText}>{item.category}</Text></View>
+          <View style={styles.tagPill}><Text style={styles.tagText}>Digital Art</Text></View>
+          <View style={styles.tagPill}><Text style={styles.tagText}>Ultra Realistic</Text></View>
+          <View style={styles.tagPill}><Text style={styles.tagText}>8K</Text></View>
+        </View>
+
+        {/* ── Prompt Section ── */}
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionHeaderTitle}>
+            <Icon name="creation" size={18} color="#A15DFB" />
+            <Text style={styles.sectionLabel}>Prompt</Text>
           </View>
+          <TouchableOpacity style={styles.copyBtnTextWrap} onPress={handleCopy}>
+            <Icon name="content-copy" size={14} color="#A15DFB" />
+            <Text style={styles.copyBtnText}>Copy</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.promptBox}>
+          <Text style={styles.promptText}>{item.promptText}</Text>
+        </View>
 
-          {/* Elegant Prompt Box with a left border accent */}
-          <View style={[styles.promptBox, { borderLeftColor: meta.color }]}>
-            <View style={styles.promptHeader}>
-              <Icon name="format-quote-close" size={26} color={meta.color + '40'} />
-              <View style={styles.actionGroup}>
-                <TouchableOpacity
-                  style={[styles.circleActionBtn, { backgroundColor: meta.color + '15' }]}
-                  onPress={handleCopy}
-                  activeOpacity={0.7}
-                >
-                  <Icon name="content-copy" size={16} color={meta.color} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.circleActionBtn}
-                  onPress={handleShare}
-                  activeOpacity={0.7}
-                >
-                  <Icon name="share-variant-outline" size={16} color="#666" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <Text style={styles.promptText}>{item.promptText}</Text>
+        {/* ── Negative Prompt Section ── */}
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionHeaderTitle}>
+            <Icon name="shield-outline" size={18} color="#A15DFB" />
+            <Text style={styles.sectionLabel}>Negative Prompt</Text>
           </View>
-
-          {/* Interactive Tool Launcher */}
-          <View style={styles.launcherSection}>
-            <View style={styles.launcherTextWrap}>
-              <Text style={styles.launcherTitle}>Generate Now</Text>
-              <Text style={styles.launcherSub}>Copies & launches your active engine</Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.launchBtn, { backgroundColor: meta.color, shadowColor: meta.color }]}
-              onPress={handleOpenTool}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.launchBtnText}>Launch {defaultTool}</Text>
-              <Icon name="arrow-right-circle" size={24} color="#FFF" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.copyBtnTextWrap} onPress={handleCopyNegative}>
+            <Icon name="content-copy" size={14} color="#A15DFB" />
+            <Text style={styles.copyBtnText}>Copy</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.promptBox}>
+          <Text style={styles.promptText}>
+            blurry, low quality, distorted, bad anatomy, deformed, extra limbs, text, watermark, logo, signature
+          </Text>
         </View>
       </ScrollView>
+
+      {/* ── Bottom Action Panel ── */}
+      <View style={[styles.bottomPanel, { paddingBottom: Math.max(insets.bottom + 8, 12) }]}>
+        <TouchableOpacity style={styles.bottomSecBtn} onPress={handleShare}>
+          <Icon name="share-variant" size={18} color="#A15DFB" style={{ marginRight: 6 }} />
+          <Text style={styles.bottomSecBtnText}>Share</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.bottomMainBtnContainer} onPress={handleCopy}>
+          <LinearGradient
+            colors={['#A15DFB', '#8A2BE2']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.bottomMainBtn}
+          >
+            <Icon name="content-copy" size={18} color="#FFF" style={{ marginRight: 6 }} />
+            <Text style={styles.bottomMainBtnText}>Copy Prompt</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.bottomSecBtn}>
+          <Icon name="download" size={18} color="#A15DFB" style={{ marginRight: 6 }} />
+          <Text style={styles.bottomSecBtnText}>Download</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+export const PromptDetailScreen = () => {
+  const route = useRoute<any>();
+  const navigation = useNavigation<any>();
+  const { item } = route.params as { item: PromptItem };
+  const insets = useSafeAreaInsets();
+
+  const [showGuide, setShowGuide] = React.useState(true);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+
+  const initialIndex = mockPrompts.findIndex(p => p.id === item.id);
+  const safeInitialIndex = initialIndex !== -1 ? initialIndex : 0;
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start(() => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(bounceAnim, {
+            toValue: -15,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bounceAnim, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]),
+        { iterations: 3 }
+      ).start(() => {
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowGuide(false);
+        });
+      });
+    });
+  }, []);
+
+  return (
+    <View style={styles.root}>
+      <FlatList
+        data={mockPrompts}
+        keyExtractor={item => item.id}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        initialScrollIndex={safeInitialIndex}
+        getItemLayout={(data, index) => ({
+          length: SCREEN_HEIGHT,
+          offset: SCREEN_HEIGHT * index,
+          index,
+        })}
+        renderItem={({ item: reelItem }) => (
+          <ReelItem
+            item={reelItem}
+            insets={insets}
+            navigation={navigation}
+          />
+        )}
+      />
+
+      {showGuide && (
+        <Animated.View style={[styles.guideOverlay, { opacity: fadeAnim, transform: [{ translateY: bounceAnim }] }]}>
+          <Icon name="chevron-double-up" size={30} color="#A15DFB" />
+          <Text style={styles.guideText}>Swipe Up for Next</Text>
+        </Animated.View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FAF9FF' },
-
-  // Ambient glow
-  bgGlow: {
-    position: 'absolute',
-    top: -100,
-    right: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    transform: [{ scale: 1.5 }],
-  },
-
-  // Hero Container
-  heroContainer: {
+  root: { flex: 1, backgroundColor: colors.background },
+  reelItemContainer: {
     width: width,
-    height: IMAGE_HEIGHT,
     position: 'relative',
-    backgroundColor: '#1E1B4B',
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
-    overflow: 'hidden',
-    shadowColor: '#1E1B4B',
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
   },
-  heroImageBlurBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    height: 52,
+  },
+  headerBtn: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+
+  // Hero Image Container
+  imageContainer: {
+    width: '100%',
+    height: 230,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#121222',
+  },
+  heroImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
-    opacity: 0.65,
-  },
-  heroImageForeground: {
-    alignSelf: 'center',
-    width: (IMAGE_HEIGHT * 9) / 16, // perfect 9:16 width based on height
-    height: '100%',
-    resizeMode: 'cover',
-    // zIndex: 2,
-  },
-  glassBtn: {
-    position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-  },
-  glassBtnFaved: {
-    backgroundColor: '#FF4D6D',
-    borderColor: '#FF758F',
-  },
-  neoBadge: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  neoBadgeText: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginLeft: 6,
-    textTransform: 'uppercase',
   },
 
-  // Content
-  contentContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-  },
-  titleRow: {
-    marginBottom: 16,
-  },
-  sectionLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#8E9AA6',
-    letterSpacing: 1.5,
-    marginBottom: 4,
-  },
+  // Title
   titleText: {
     fontSize: 22,
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: -0.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 14,
+    marginBottom: 12,
   },
 
-  // Prompt Box
-  promptBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#ECECF3',
-    borderLeftWidth: 5,
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.03,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+  // Tags
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 20,
   },
-  promptHeader: {
+  tagPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: '#121222',
+    borderWidth: 1,
+    borderColor: '#1F1F35',
+  },
+  tagText: {
+    color: '#A15DFB',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Sections
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+    marginTop: 8,
   },
-  actionGroup: {
+  sectionHeaderTitle: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  circleActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    justifyContent: 'center',
     alignItems: 'center',
+    gap: 6,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  copyBtnTextWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  copyBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#A15DFB',
+  },
+  promptBox: {
+    backgroundColor: '#121222',
+    borderColor: '#1F1F35',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
   },
   promptText: {
-    fontSize: 15,
-    color: '#334155',
-    lineHeight: 24,
+    fontSize: 14,
+    color: '#94A3B8',
+    lineHeight: 20,
     fontWeight: '500',
   },
 
-  // Launcher Panel
-  launcherSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 16,
+  // Bottom action bar
+  bottomPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#ECECF3',
-    shadowColor: '#000',
-    shadowOpacity: 0.02,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
-  },
-  launcherTextWrap: {
-    flex: 1,
-    marginRight: 12,
-  },
-  launcherTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 2,
-  },
-  launcherSub: {
-    fontSize: 11,
-    color: '#64748B',
-    lineHeight: 15,
-  },
-  launchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderColor: '#1F1F35',
     paddingHorizontal: 16,
-    borderRadius: 16,
+    paddingTop: 12,
     gap: 8,
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
   },
-  launchBtnText: {
-    color: '#FFF',
+  bottomSecBtn: {
+    flex: 1.1,
+    flexDirection: 'row',
+    height: 44,
+    backgroundColor: '#121222',
+    borderColor: '#1F1F35',
+    borderWidth: 1,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomSecBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  bottomMainBtnContainer: {
+    flex: 2,
+    height: 44,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  bottomMainBtn: {
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomMainBtnText: {
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
+  },
+  guideOverlay: {
+    position: 'absolute',
+    bottom: 120,
+    alignSelf: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(12, 12, 20, 0.9)',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#1F1F35',
+    zIndex: 999,
+  },
+  guideText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
   },
 });

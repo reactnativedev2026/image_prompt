@@ -10,6 +10,7 @@ import {
 import { useAppContext } from '../store/AppContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '../theme/colors';
 
 const TOOLS = [
   'Gemini', 'Canva', 'Bing Image Creator',
@@ -30,7 +31,7 @@ const TOOL_ICONS: Record<string, { icon: string; color: string }> = {
 
 export const SettingsScreen = () => {
   const { defaultTool, setDefaultTool, clearFavorites } = useAppContext();
-  const insets = useSafeAreaInsets()
+  const insets = useSafeAreaInsets();
   const handleClearFavorites = () => {
     Alert.alert(
       'Clear Favorites',
@@ -46,8 +47,8 @@ export const SettingsScreen = () => {
     <ScrollView style={[styles.container, { paddingTop: insets.top }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>⚙️ Settings</Text>
-        <Text style={styles.headerSub}>Customise your experience</Text>
+        <Text style={styles.headerTitle}>👤 Profile & Settings</Text>
+        <Text style={styles.headerSub}>Customize your AI Prompt experience</Text>
       </View>
 
       {/* Default Tool Section */}
@@ -69,7 +70,7 @@ export const SettingsScreen = () => {
               <View style={[styles.toolIcon, { backgroundColor: meta.color + '15' }]}>
                 <Icon name={meta.icon} size={20} color={meta.color} />
               </View>
-              <Text style={[styles.toolName, active && { color: '#1A1A2E', fontWeight: '700' }]}>
+              <Text style={[styles.toolName, active && { color: '#FFFFFF', fontWeight: '700' }]}>
                 {tool}
               </Text>
               {active ? (
@@ -77,7 +78,7 @@ export const SettingsScreen = () => {
                   <Icon name="check" size={14} color="#FFF" />
                 </View>
               ) : (
-                <Icon name="circle-outline" size={22} color="#DDD" />
+                <Icon name="circle-outline" size={22} color="#475569" />
               )}
             </TouchableOpacity>
           );
@@ -100,8 +101,8 @@ export const SettingsScreen = () => {
       <View style={[styles.section, { marginBottom: 40 }]}>
         <Text style={styles.sectionLabel}>ABOUT</Text>
         <View style={styles.aboutCard}>
-          <Icon name="image-multiple-outline" size={32} color="#FF69B4" />
-          <Text style={styles.aboutAppName}>Image Prompt</Text>
+          <Icon name="image-multiple-outline" size={32} color={colors.primary} />
+          <Text style={styles.aboutAppName}>AI Prompt Generator</Text>
           <Text style={styles.aboutVersion}>Version 1.0.0</Text>
           <Text style={styles.aboutTagline}>Curated prompts for creative minds.</Text>
         </View>
@@ -111,7 +112,7 @@ export const SettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFF' },
+  container: { flex: 1, backgroundColor: colors.background },
 
   header: {
     paddingHorizontal: 20,
@@ -121,12 +122,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1A1A2E',
+    color: '#FFFFFF',
     letterSpacing: -0.3,
   },
   headerSub: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textLight,
     marginTop: 2,
   },
 
@@ -137,14 +138,14 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#BBBBBB',
+    color: '#64748B',
     letterSpacing: 1.2,
     marginBottom: 6,
     marginTop: 6,
   },
   sectionHint: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textLight,
     marginBottom: 14,
     lineHeight: 18,
   },
@@ -152,22 +153,17 @@ const styles = StyleSheet.create({
   toolRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#121222',
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 14,
     marginBottom: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
     borderWidth: 1.5,
-    borderColor: 'transparent',
+    borderColor: '#1F1F35',
   },
   toolRowActive: {
-    borderColor: '#FF69B4',
-    backgroundColor: '#FFF5F9',
+    borderColor: '#8A2BE2',
+    backgroundColor: '#1A0E2A',
   },
   toolIcon: {
     width: 40,
@@ -180,14 +176,14 @@ const styles = StyleSheet.create({
   toolName: {
     flex: 1,
     fontSize: 15,
-    color: '#555',
+    color: '#CBD5E1',
     fontWeight: '500',
   },
   checkCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#FF69B4',
+    backgroundColor: '#8A2BE2',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -195,18 +191,18 @@ const styles = StyleSheet.create({
   dangerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5F5',
+    backgroundColor: '#2A1215',
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#FFE0E0',
+    borderColor: '#3F1F22',
   },
   dangerIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFE0E0',
+    backgroundColor: '#3F1F22',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -219,32 +215,27 @@ const styles = StyleSheet.create({
   },
 
   aboutCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#121222',
     borderRadius: 18,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#FF69B4',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
     borderWidth: 1,
-    borderColor: '#F5F0FF',
+    borderColor: '#1F1F35',
   },
   aboutAppName: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1A1A2E',
+    color: '#FFFFFF',
     marginTop: 10,
   },
   aboutVersion: {
     fontSize: 13,
-    color: '#AAAAAA',
+    color: '#64748B',
     marginTop: 4,
   },
   aboutTagline: {
     fontSize: 13,
-    color: '#888',
+    color: colors.textLight,
     marginTop: 6,
     fontStyle: 'italic',
   },

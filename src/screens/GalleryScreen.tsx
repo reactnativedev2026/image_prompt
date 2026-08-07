@@ -16,35 +16,45 @@ import { useAppContext } from '../store/AppContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
+import { colors } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 34) / 2;
-// Restored to the original height (4:3 ratio: width * 4 / 3)
-const IMAGE_HEIGHT = (CARD_WIDTH * 4) / 3;
+const CARD_WIDTH = (width - 40) / 3;
+const IMAGE_HEIGHT = CARD_WIDTH * 1.50;
 
-const CATEGORIES = ['All', 'Cyberpunk', 'Sci-Fi', 'Fantasy', 'Minimalist', 'Steampunk', 'Portrait'];
+const CATEGORIES = ['All', 'Art', 'Photography', 'Illustration', '3D Render', 'Anime'];
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Cyberpunk: '#7C3AED',
-  'Sci-Fi': '#0284C7',
-  Fantasy: '#059669',
-  Minimalist: '#D97706',
-  Steampunk: '#B45309',
-  Portrait: '#DB2777',
-  All: '#FF69B4',
+const mapCategory = (itemCat: string) => {
+  if (itemCat === 'Cyberpunk') return 'Anime';
+  if (itemCat === 'Sci-Fi') return '3D Render';
+  if (itemCat === 'Fantasy') return 'Illustration';
+  if (itemCat === 'Minimalist') return 'Art';
+  if (itemCat === 'Steampunk') return 'Illustration';
+  if (itemCat === 'Portrait') return 'Photography';
+  return 'Art';
 };
 
-const CATEGORY_GRADIENTS: Record<string, string[]> = {
-  Cyberpunk: ['#7C3AED', '#EC4899'],
-  'Sci-Fi': ['#0284C7', '#0EA5E9'],
-  Fantasy: ['#059669', '#10B981'],
-  Minimalist: ['#D97706', '#F59E0B'],
-  Steampunk: ['#B45309', '#D97706'],
-  Portrait: ['#DB2777', '#EC4899'],
-  All: ['#FF69B4', '#7C3AED'],
+const getPromptDisplayMeta = (id: string, category: string) => {
+  const metas: Record<string, { title: string; rating: string }> = {
+    '1': { title: 'Cyberpunk City', rating: '4.8K' },
+    '7': { title: 'Cozy Cabin', rating: '3.2K' },
+    '8': { title: 'Astronaut', rating: '5.6K' },
+    '2': { title: 'Fantasy Portrait', rating: '4.1K' },
+    '9': { title: 'Night Drive', rating: '2.9K' },
+    '10': { title: 'Floating Island', rating: '3.7K' },
+    '11': { title: 'Cute Robot', rating: '2.3K' },
+    '12': { title: 'Mountain Lake', rating: '3.1K' },
+    '13': { title: 'Anime Girl', rating: '4.4K' },
+    '14': { title: 'Ice Dragon', rating: '3.5K' },
+    '15': { title: 'Steam Train', rating: '3.9K' },
+    '16': { title: 'Pocket Watch', rating: '3.4K' },
+    '6': { title: 'Cyber Geisha', rating: '4.2K' },
+    '17': { title: 'Space Station', rating: '5.1K' },
+    '18': { title: 'Botanical Leaf', rating: '2.8K' },
+  };
+  return metas[id] || { title: category + ' Item', rating: '3.0K' };
 };
 
-// Animated Card Component for Premium Feel with multicolor gradient border
 const AnimatedCard = ({ item, index, navigation, toggleFavorite, isFavorite }: {
   item: PromptItem;
   index: number;
@@ -52,72 +62,66 @@ const AnimatedCard = ({ item, index, navigation, toggleFavorite, isFavorite }: {
   toggleFavorite: any;
   isFavorite: any;
 }) => {
-  const scale = React.useRef(new Animated.Value(0.92)).current;
-  const opacity = React.useRef(new Animated.Value(0)).current;
-
-  // Generate fake high-quality view counts based on item ID for premium vibe
-  const fakeViews = React.useMemo(() => {
-    const idNum = parseInt(item.id, 10) || 1;
-    return (idNum * 142 + 250) % 900 + 100;
-  }, [item.id]);
+  const scale = useRef(new Animated.Value(0.95)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 400,
-        delay: Math.min(index * 60, 600),
+        duration: 300,
+        delay: Math.min(index * 30, 300),
         useNativeDriver: true,
       }),
       Animated.spring(scale, {
         toValue: 1,
         friction: 8,
-        tension: 40,
-        delay: Math.min(index * 60, 600),
+        tension: 50,
+        delay: Math.min(index * 30, 300),
         useNativeDriver: true,
       })
     ]).start();
   }, []);
 
+  const meta = getPromptDisplayMeta(item.id, item.category);
+  const fav = isFavorite(item.id);
+
   return (
     <Animated.View style={[styles.cardContainer, { opacity, transform: [{ scale }] }]}>
-      {/* Dynamic Multicolor Gradient Border */}
-      <LinearGradient
-        colors={['#FF69B4', '#7C3AED', '#3B82F6']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradientBorder}
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('PromptDetail', { item })}
+        style={styles.cardInner}
       >
-        <TouchableOpacity
-          activeOpacity={0.92}
-          onPress={() => navigation.navigate('PromptDetail', { item })}
-          style={styles.cardInner}
-        >
-          <View style={styles.imageWrapper}>
-            <Image source={{ uri: item.imageUrl }} style={styles.image} />
-            {/* Glass-styled Favorite Button */}
+        <Image source={{ uri: item.imageUrl }} style={styles.image} />
+        {/* Top-Right Image Icon */}
+        <View style={styles.imageIconBadge}>
+          <Icon name="image" size={12} color="#FFF" />
+        </View>
+
+        {/* Info overlayed on bottom of image */}
+        <View style={styles.cardInfoOverlay}>
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {meta.title}
+          </Text>
+          <View style={styles.cardFooter}>
+            <View style={styles.ratingWrap}>
+              <Icon name="star" size={10} color="#FFB300" />
+              <Text style={styles.ratingText}>{meta.rating}</Text>
+            </View>
             <TouchableOpacity
-              style={styles.favButton}
-              activeOpacity={0.8}
               onPress={() => toggleFavorite(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Icon
-                name={isFavorite(item.id) ? 'heart' : 'heart-outline'}
-                size={16}
-                color={isFavorite(item.id) ? '#FF4D6D' : '#FFFFFF'}
+                name={fav ? 'bookmark' : 'bookmark-outline'}
+                size={14}
+                color={fav ? colors.primary : '#FFFFFF'}
               />
             </TouchableOpacity>
-
-            {/* Premium Bottom Bar on Image */}
-            <View style={styles.imageFooterOverlay}>
-              <View style={styles.viewCountWrap}>
-                <Icon name="eye-outline" size={13} color="#FFFFFF" />
-                <Text style={styles.viewCountText}>{fakeViews}</Text>
-              </View>
-            </View>
           </View>
-        </TouchableOpacity>
-      </LinearGradient>
+        </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 };
@@ -128,144 +132,109 @@ export const GalleryScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // Animated Value for Scroll-Collapse Header
-  const scrollY = useRef(new Animated.Value(0)).current;
-
   const filteredPrompts = mockPrompts.filter(item => {
+    const itemUIcategory = mapCategory(item.category);
     const matchesSearch =
       item.promptText.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+      itemUIcategory.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || itemUIcategory === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const insets = useSafeAreaInsets();
 
-  // Dynamic values for animated header shrinking/collapsing
-  const headerHeight = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [64, 0],
-    extrapolate: 'clamp',
-  });
-
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 50],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
-  const headerScale = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [1, 0.88],
-    extrapolate: 'clamp',
-  });
-
   return (
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
-      {/* ── Collapsible Fancy Header ── */}
-      <Animated.View
-        style={[
-          styles.fancyHeader,
-          {
-            height: headerHeight,
-            opacity: headerOpacity,
-            transform: [{ scale: headerScale }],
-          },
-        ]}
-      >
-        <View>
-          <Text style={styles.headerTitle}>✨ AI Studio</Text>
-          <Text style={styles.headerSubtitle}>Discover stunning prompts formula</Text>
-        </View>
-        <View style={styles.avatarGlow}>
-          <Icon name="creation" size={18} color="#FF69B4" />
-        </View>
-      </Animated.View>
+      {/* ── Top Header ── */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.headerBtn}>
+          <Icon name="menu" size={24} color="#FFF" />
+        </TouchableOpacity>
 
-      {/* Search & Pills stay fixed */}
-      <View style={styles.fixedTopSection}>
-        {/* Search */}
+        <View style={styles.titleWrapper}>
+          <Text style={styles.headerTitleMain}>
+            AI Prompt <Text style={styles.headerTitlePurple}>Generator</Text>
+          </Text>
+        </View>
+
+        <TouchableOpacity style={styles.headerBtn}>
+          <Icon name="crown" size={24} color="#8A2BE2" />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Search Bar & Filter ── */}
+      <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
-          <Icon name="magnify" size={20} color="#94A3B8" />
+          <Icon name="magnify" size={20} color="#64748B" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search prompts style..."
-            placeholderTextColor="#94A3B8"
+            placeholder="Search prompts or categories..."
+            placeholderTextColor="#64748B"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="close-circle" size={18} color="#94A3B8" />
+              <Icon name="close-circle" size={18} color="#64748B" />
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity style={styles.filterBtn} activeOpacity={0.8}>
+          <LinearGradient
+            colors={['#A15DFB', '#8A2BE2']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.filterBtnGradient}
+          >
+            <Icon name="tune" size={20} color="#FFF" />
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
 
-        {/* Category Pills */}
-        <View style={styles.pillRowWrapper}>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={CATEGORIES}
-            keyExtractor={c => c}
-            contentContainerStyle={styles.pillRow}
-            renderItem={({ item }) => {
-              const active = selectedCategory === item;
-              const cc = CATEGORY_COLORS[item] || '#FF69B4';
-
-              let iconName = 'tag-outline';
-              if (item === 'All') iconName = 'apps';
-              else if (item === 'Cyberpunk') iconName = 'robot';
-              else if (item === 'Sci-Fi') iconName = 'rocket-launch';
-              else if (item === 'Fantasy') iconName = 'creation';
-              else if (item === 'Minimalist') iconName = 'shape-outline';
-              else if (item === 'Steampunk') iconName = 'cog';
-              else if (item === 'Portrait') iconName = 'account-box';
-
-              if (active) {
-                const gradientColors = CATEGORY_GRADIENTS[item] || ['#FF69B4', '#7C3AED'];
-                return (
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => setSelectedCategory(item)}
-                  >
-                    <LinearGradient
-                      colors={gradientColors}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.pillActiveGradient}
-                    >
-                      <Icon name={iconName} size={15} color="#FFF" style={{ marginRight: 6 }} />
-                      <Text style={[styles.pillText, { color: '#FFF' }]}>{item}</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                );
-              }
-
+      {/* ── Category Pills ── */}
+      <View style={styles.pillRowWrapper}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={CATEGORIES}
+          keyExtractor={c => c}
+          contentContainerStyle={styles.pillRow}
+          renderItem={({ item }) => {
+            const active = selectedCategory === item;
+            if (active) {
               return (
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  style={styles.pill}
                   onPress={() => setSelectedCategory(item)}
                 >
-                  <Icon name={iconName} size={15} color={cc} style={{ marginRight: 6 }} />
-                  <Text style={styles.pillText}>{item}</Text>
+                  <LinearGradient
+                    colors={['#A15DFB', '#8A2BE2']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.pillActiveGradient}
+                  >
+                    <Text style={styles.pillTextActive}>{item}</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               );
-            }}
-          />
-        </View>
+            }
+            return (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.pill}
+                onPress={() => setSelectedCategory(item)}
+              >
+                <Text style={styles.pillText}>{item}</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
       </View>
 
-      {/* Grid */}
-      <Animated.FlatList
+      {/* ── 3-Column Grid ── */}
+      <FlatList
         data={filteredPrompts}
         keyExtractor={i => i.id}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-        scrollEventThrottle={16}
         renderItem={({ item, index }) => (
           <AnimatedCard
             item={item}
@@ -275,13 +244,13 @@ export const GalleryScreen = () => {
             isFavorite={isFavorite}
           />
         )}
-        numColumns={2}
+        numColumns={3}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.gridContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
-            <Icon name="image-search-outline" size={56} color="#CBD5E1" />
+            <Icon name="image-search-outline" size={48} color="#2A2A3F" />
             <Text style={styles.emptyText}>No prompts found</Text>
           </View>
         }
@@ -291,170 +260,174 @@ export const GalleryScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9FF' },
+  container: { flex: 1, backgroundColor: colors.background },
 
-  // Collapsible Fancy Header
-  fancyHeader: {
+  // Header
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    overflow: 'hidden',
+    paddingHorizontal: 16,
+    height: 48,
+    marginBottom: 8,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-    marginTop: 1,
-  },
-  avatarGlow: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#FFF0F5',
+  headerBtn: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FFE4E6',
   },
-
-  fixedTopSection: {
-    backgroundColor: '#FAF9FF',
-    paddingTop: 8,
+  titleWrapper: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitleMain: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  headerTitlePurple: {
+    color: '#A15DFB',
   },
 
   // Search
-  searchBox: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    marginBottom: 14,
-    paddingHorizontal: 14,
-    height: 48,
-    borderRadius: 16,
-    gap: 8,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    paddingHorizontal: 16,
+    gap: 10,
+    marginBottom: 12,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#121222',
+    borderColor: '#1F1F35',
     borderWidth: 1,
-    borderColor: '#ECECF3',
+    paddingHorizontal: 12,
+    height: 44,
+    borderRadius: 12,
+    gap: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
-    color: '#0F172A',
+    color: '#FFFFFF',
+    padding: 0,
+  },
+  filterBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  filterBtnGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Pills
   pillRowWrapper: {
-    height: 48,
+    height: 40,
+    marginBottom: 8,
   },
-  pillRow: { paddingHorizontal: 20, paddingBottom: 8, gap: 8, alignItems: 'center' },
+  pillRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
   pill: {
-    flexDirection: 'row',
-    height: 34,
     paddingHorizontal: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 17,
-    backgroundColor: '#FFFFFF',
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: '#121222',
     borderWidth: 1,
-    borderColor: '#ECECF3',
-    marginRight: 8,
+    borderColor: '#1F1F35',
   },
   pillActiveGradient: {
-    flexDirection: 'row',
-    height: 34,
     paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 17,
-    marginRight: 8,
   },
   pillText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#94A3B8',
+  },
+  pillTextActive: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 
   // Grid
-  gridContent: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 30 },
-  row: { justifyContent: 'space-between', gap: 10 },
+  gridContent: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 30 },
+  row: { justifyContent: 'flex-start', gap: 8 },
 
-  // Card Outer Container
+  // Card
   cardContainer: {
     width: CARD_WIDTH,
-    marginBottom: 10,
-  },
-  // Multicolor Gradient Border Frame
-  gradientBorder: {
-    padding: 2.5,
-    borderRadius: 18,
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    marginBottom: 12,
   },
   cardInner: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  imageWrapper: {
-    width: '100%',
     height: IMAGE_HEIGHT,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#121222',
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#1F1F35',
     position: 'relative',
   },
   image: { width: '100%', height: '100%', resizeMode: 'cover' },
-  favButton: {
+  imageIconBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    borderRadius: 10,
-    padding: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    zIndex: 10,
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 6,
+    padding: 4,
+    zIndex: 2,
   },
 
-  // Image Footer View Count Overlay
-  imageFooterOverlay: {
+  // Card details
+  cardInfoOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 36,
-    paddingHorizontal: 10,
-    justifyContent: 'flex-end',
-    paddingBottom: 8,
-    backgroundColor: 'transparent',
+    // backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    zIndex: 2,
   },
-  viewCountWrap: {
+  cardTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ratingWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
-  viewCountText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
+  ratingText: {
+    color: '#FFB300',
+    fontSize: 9,
+    fontWeight: '700',
   },
 
   // Empty
-  emptyBox: { alignItems: 'center', paddingVertical: 60, width: width - 40 },
-  emptyText: { marginTop: 12, fontSize: 15, color: '#94A3B8', fontWeight: '600' },
+  emptyBox: { alignItems: 'center', paddingVertical: 60, width: width - 32 },
+  emptyText: { marginTop: 12, fontSize: 14, color: '#64748B', fontWeight: '600' },
 });
+
 export default GalleryScreen;

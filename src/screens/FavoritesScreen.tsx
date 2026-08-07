@@ -14,83 +14,98 @@ import { useAppContext } from '../store/AppContext';
 import { PromptItem } from '../data/mockPrompts';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import { colors } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 34) / 2;
-// Restored to the original height (4:3 ratio: width * 4 / 3)
-const IMAGE_HEIGHT = (CARD_WIDTH * 4) / 3;
+const CARD_WIDTH = (width - 40) / 3;
+const IMAGE_HEIGHT = CARD_WIDTH * 1.50;
 
-// Premium Animated Favorite Card component with multicolor gradient border
+const getPromptDisplayMeta = (id: string, category: string) => {
+  const metas: Record<string, { title: string; rating: string }> = {
+    '1': { title: 'Cyberpunk City', rating: '4.8K' },
+    '7': { title: 'Cozy Cabin', rating: '3.2K' },
+    '8': { title: 'Astronaut', rating: '5.6K' },
+    '2': { title: 'Fantasy Portrait', rating: '4.1K' },
+    '9': { title: 'Night Drive', rating: '2.9K' },
+    '10': { title: 'Floating Island', rating: '3.7K' },
+    '11': { title: 'Cute Robot', rating: '2.3K' },
+    '12': { title: 'Mountain Lake', rating: '3.1K' },
+    '13': { title: 'Anime Girl', rating: '4.4K' },
+    '14': { title: 'Ice Dragon', rating: '3.5K' },
+    '15': { title: 'Steam Train', rating: '3.9K' },
+    '16': { title: 'Pocket Watch', rating: '3.4K' },
+    '6': { title: 'Cyber Geisha', rating: '4.2K' },
+    '17': { title: 'Space Station', rating: '5.1K' },
+    '18': { title: 'Botanical Leaf', rating: '2.8K' },
+  };
+  return metas[id] || { title: category + ' Item', rating: '3.0K' };
+};
+
 const AnimatedFavoriteCard = ({ item, index, navigation, toggleFavorite }: {
   item: PromptItem;
   index: number;
   navigation: any;
   toggleFavorite: any;
 }) => {
-  const scale = React.useRef(new Animated.Value(0.92)).current;
-  const opacity = React.useRef(new Animated.Value(0)).current;
-
-  // Generate fake high-quality view counts based on item ID for premium vibe
-  const fakeViews = React.useMemo(() => {
-    const idNum = parseInt(item.id, 10) || 1;
-    return (idNum * 142 + 250) % 900 + 100;
-  }, [item.id]);
+  const scale = useRef(new Animated.Value(0.95)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 400,
-        delay: Math.min(index * 60, 600),
+        duration: 300,
+        delay: Math.min(index * 30, 300),
         useNativeDriver: true,
       }),
       Animated.spring(scale, {
         toValue: 1,
         friction: 8,
-        tension: 40,
-        delay: Math.min(index * 60, 600),
+        tension: 50,
+        delay: Math.min(index * 30, 300),
         useNativeDriver: true,
       })
     ]).start();
   }, []);
 
+  const meta = getPromptDisplayMeta(item.id, item.category);
+
   return (
     <Animated.View style={[styles.cardContainer, { opacity, transform: [{ scale }] }]}>
-      {/* Dynamic Multicolor Gradient Border */}
-      <LinearGradient
-        colors={['#FF69B4', '#7C3AED', '#3B82F6']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradientBorder}
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('PromptDetail', { item })}
+        style={styles.cardInner}
       >
-        <TouchableOpacity
-          activeOpacity={0.92}
-          onPress={() => navigation.navigate('PromptDetail', { item })}
-          style={styles.cardInner}
-        >
-          <View style={styles.imageWrapper}>
-            <Image source={{ uri: item.imageUrl }} style={styles.image} />
-            
-            {/* Glass-styled Favorite Button */}
-            <TouchableOpacity
-              style={styles.favButton}
-              activeOpacity={0.8}
-              onPress={() => toggleFavorite(item)}
-            >
-              <Icon name="heart" size={16} color="#FF4D6D" />
-            </TouchableOpacity>
+        <Image source={{ uri: item.imageUrl }} style={styles.image} />
+        {/* Top-Right Image Icon */}
+        <View style={styles.imageIconBadge}>
+          <Icon name="image" size={12} color="#FFF" />
+        </View>
 
-            {/* Premium Bottom Bar on Image */}
-            <View style={styles.imageFooterOverlay}>
-              <View style={styles.viewCountWrap}>
-                <Icon name="eye-outline" size={13} color="#FFFFFF" />
-                <Text style={styles.viewCountText}>{fakeViews}</Text>
-              </View>
+        {/* Info overlayed on bottom of image */}
+        <View style={styles.cardInfoOverlay}>
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {meta.title}
+          </Text>
+          <View style={styles.cardFooter}>
+            <View style={styles.ratingWrap}>
+              <Icon name="star" size={10} color="#FFB300" />
+              <Text style={styles.ratingText}>{meta.rating}</Text>
             </View>
+            <TouchableOpacity
+              onPress={() => toggleFavorite(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon
+                name="bookmark"
+                size={14}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </LinearGradient>
+        </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 };
@@ -115,11 +130,11 @@ export const FavoritesScreen = () => {
       {favorites.length === 0 ? (
         <View style={styles.emptyContainer}>
           <View style={styles.emptyCircle}>
-            <Icon name="heart-outline" size={44} color="#FF69B4" />
+            <Icon name="heart-outline" size={44} color={colors.primary} />
           </View>
           <Text style={styles.emptyTitle}>Nothing saved yet</Text>
           <Text style={styles.emptySubtitle}>
-            Tap the heart icon on any prompt to save it here for quick access.
+            Tap the bookmark icon on any prompt to save it here for quick access.
           </Text>
           <TouchableOpacity
             style={styles.exploreBtn}
@@ -141,7 +156,7 @@ export const FavoritesScreen = () => {
               toggleFavorite={toggleFavorite}
             />
           )}
-          numColumns={2}
+          numColumns={3}
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.gridContent}
           showsVerticalScrollIndicator={false}
@@ -152,7 +167,7 @@ export const FavoritesScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9FF' },
+  container: { flex: 1, backgroundColor: colors.background },
 
   header: {
     paddingHorizontal: 20,
@@ -161,79 +176,76 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#FFFFFF',
     letterSpacing: -0.3,
   },
   headerSub: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.textLight,
     marginTop: 2,
   },
 
-  gridContent: { paddingHorizontal: 12, paddingBottom: 30 },
-  row: { justifyContent: 'space-between', gap: 10 },
+  gridContent: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 30 },
+  row: { justifyContent: 'flex-start', gap: 8 },
 
-  // Card Outer Container
+  // Card
   cardContainer: {
     width: CARD_WIDTH,
-    marginBottom: 10,
-  },
-  // Multicolor Gradient Border Frame
-  gradientBorder: {
-    padding: 2.5, // thickness of gradient border
-    borderRadius: 18,
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    marginBottom: 12,
   },
   cardInner: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  imageWrapper: {
-    width: '100%',
     height: IMAGE_HEIGHT,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#121222',
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#1F1F35',
     position: 'relative',
   },
   image: { width: '100%', height: '100%', resizeMode: 'cover' },
-  
-  favButton: {
+  imageIconBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    borderRadius: 10,
-    padding: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    zIndex: 10,
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 6,
+    padding: 4,
+    zIndex: 2,
   },
 
-  // Image Footer View Count Overlay
-  imageFooterOverlay: {
+  // Card details
+  cardInfoOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 36,
-    paddingHorizontal: 10,
-    justifyContent: 'flex-end',
-    paddingBottom: 8,
-    backgroundColor: 'transparent',
+    // backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    zIndex: 2,
   },
-  viewCountWrap: {
+  cardTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ratingWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
-  viewCountText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
+  ratingText: {
+    color: '#FFB300',
+    fontSize: 9,
+    fontWeight: '700',
   },
 
   // Empty state
@@ -247,25 +259,22 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#FFF0F5',
+    backgroundColor: '#121222',
+    borderWidth: 1,
+    borderColor: '#1F1F35',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#FF69B4',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.textLight,
     textAlign: 'center',
     lineHeight: 21,
     marginBottom: 28,
@@ -273,15 +282,11 @@ const styles = StyleSheet.create({
   exploreBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF69B4',
+    backgroundColor: '#8A2BE2',
     paddingVertical: 13,
     paddingHorizontal: 26,
     borderRadius: 30,
     gap: 8,
-    shadowColor: '#FF69B4',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
     elevation: 5,
   },
   exploreBtnText: {
@@ -291,4 +296,5 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 });
+
 export default FavoritesScreen;
