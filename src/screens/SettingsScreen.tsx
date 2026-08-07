@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,32 +6,20 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Share as RNShare,
+  Modal,
 } from 'react-native';
 import { useAppContext } from '../store/AppContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
-
-const TOOLS = [
-  'Gemini', 'Canva', 'Bing Image Creator',
-  'Leonardo AI', 'Ideogram', 'Playground',
-  'Adobe Firefly', 'ChatGPT',
-];
-
-const TOOL_ICONS: Record<string, { icon: string; color: string }> = {
-  'Gemini': { icon: 'google', color: '#4285F4' },
-  'Canva': { icon: 'palette', color: '#7D2AE8' },
-  'Bing Image Creator': { icon: 'microsoft-bing', color: '#008373' },
-  'Leonardo AI': { icon: 'brush', color: '#FF7043' },
-  'Ideogram': { icon: 'format-text', color: '#263238' },
-  'Playground': { icon: 'controller-classic', color: '#EC407A' },
-  'Adobe Firefly': { icon: 'fire', color: '#E53935' },
-  'ChatGPT': { icon: 'robot-outline', color: '#10A37F' },
-};
+import LinearGradient from 'react-native-linear-gradient';
 
 export const SettingsScreen = () => {
-  const { defaultTool, setDefaultTool, clearFavorites } = useAppContext();
+  const { clearFavorites } = useAppContext();
   const insets = useSafeAreaInsets();
+  const [privacyVisible, setPrivacyVisible] = useState(false);
+
   const handleClearFavorites = () => {
     Alert.alert(
       'Clear Favorites',
@@ -43,71 +31,159 @@ export const SettingsScreen = () => {
     );
   };
 
+  const handleShareApp = async () => {
+    try {
+      await RNShare.share({
+        message: '✨ AI Prompt Generator - Create stunning AI images with these curated prompts!\nDownload now and start generating!',
+      });
+    } catch (e: any) {
+      console.error(e.message);
+    }
+  };
+
   return (
-    <ScrollView style={[styles.container, { paddingTop: insets.top }]} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>👤 Profile & Settings</Text>
-        <Text style={styles.headerSub}>Customize your AI Prompt experience</Text>
-      </View>
-
-      {/* Default Tool Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>DEFAULT REDIRECT TOOL</Text>
-        <Text style={styles.sectionHint}>
-          Opens automatically when you tap "Copy & Open"
-        </Text>
-        {TOOLS.map(tool => {
-          const meta = TOOL_ICONS[tool] || { icon: 'open-in-new', color: '#888' };
-          const active = defaultTool === tool;
-          return (
-            <TouchableOpacity
-              key={tool}
-              style={[styles.toolRow, active && styles.toolRowActive]}
-              activeOpacity={0.8}
-              onPress={() => setDefaultTool(tool)}
-            >
-              <View style={[styles.toolIcon, { backgroundColor: meta.color + '15' }]}>
-                <Icon name={meta.icon} size={20} color={meta.color} />
-              </View>
-              <Text style={[styles.toolName, active && { color: '#FFFFFF', fontWeight: '700' }]}>
-                {tool}
-              </Text>
-              {active ? (
-                <View style={styles.checkCircle}>
-                  <Icon name="check" size={14} color="#FFF" />
-                </View>
-              ) : (
-                <Icon name="circle-outline" size={22} color="#475569" />
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Data Management */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>DATA MANAGEMENT</Text>
-        <TouchableOpacity style={styles.dangerRow} onPress={handleClearFavorites}>
-          <View style={styles.dangerIcon}>
-            <Icon name="trash-can-outline" size={20} color="#EF4444" />
-          </View>
-          <Text style={styles.dangerText}>Clear All Favorites</Text>
-          <Icon name="chevron-right" size={20} color="#EF4444" />
-        </TouchableOpacity>
-      </View>
-
-      {/* About */}
-      <View style={[styles.section, { marginBottom: 40 }]}>
-        <Text style={styles.sectionLabel}>ABOUT</Text>
-        <View style={styles.aboutCard}>
-          <Icon name="image-multiple-outline" size={32} color={colors.primary} />
-          <Text style={styles.aboutAppName}>AI Prompt Generator</Text>
-          <Text style={styles.aboutVersion}>Version 1.0.0</Text>
-          <Text style={styles.aboutTagline}>Curated prompts for creative minds.</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Profile Card Header */}
+        <View style={styles.profileHeader}>
+          <LinearGradient
+            colors={colors.primaryGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.avatarGradient}
+          >
+            <Icon name="account" size={48} color="#FFF" />
+          </LinearGradient>
+          <Text style={styles.profileName}>AI Prompt Creator</Text>
+          <Text style={styles.profileEmail}>explorer@imageprompt.com</Text>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* ── Commented Default Redirect Tool Feature ── */}
+        {/* 
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>DEFAULT REDIRECT TOOL</Text>
+          <Text style={styles.sectionHint}>
+            Opens automatically when you tap "Copy & Open"
+          </Text>
+          {TOOLS.map(tool => {
+            const meta = TOOL_ICONS[tool] || { icon: 'open-in-new', color: '#888' };
+            const active = defaultTool === tool;
+            return (
+              <TouchableOpacity
+                key={tool}
+                style={[styles.toolRow, active && styles.toolRowActive]}
+                activeOpacity={0.8}
+                onPress={() => setDefaultTool(tool)}
+              >
+                <View style={[styles.toolIcon, { backgroundColor: meta.color + '15' }]}>
+                  <Icon name={meta.icon} size={20} color={meta.color} />
+                </View>
+                <Text style={[styles.toolName, active && { color: '#FFFFFF', fontWeight: '700' }]}>
+                  {tool}
+                </Text>
+                {active ? (
+                  <View style={styles.checkCircle}>
+                    <Icon name="check" size={14} color="#FFF" />
+                  </View>
+                ) : (
+                  <Icon name="circle-outline" size={22} color="#475569" />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        */}
+
+        {/* Settings Options Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>APPLICATION SETTINGS</Text>
+
+          <TouchableOpacity style={styles.settingsRow} activeOpacity={0.7} onPress={handleShareApp}>
+            <View style={[styles.iconContainer, { backgroundColor: '#10B98115' }]}>
+              <Icon name="share-variant" size={20} color="#10B981" />
+            </View>
+            <Text style={styles.settingsLabel}>Share App</Text>
+            <Icon name="chevron-right" size={20} color="#64748B" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingsRow} activeOpacity={0.7} onPress={() => setPrivacyVisible(true)}>
+            <View style={[styles.iconContainer, { backgroundColor: '#3B82F615' }]}>
+              <Icon name="shield-lock-outline" size={20} color="#3B82F6" />
+            </View>
+            <Text style={styles.settingsLabel}>Privacy Policy</Text>
+            <Icon name="chevron-right" size={20} color="#64748B" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Data Management */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>DATA MANAGEMENT</Text>
+          <TouchableOpacity style={styles.dangerRow} onPress={handleClearFavorites}>
+            <View style={styles.dangerIcon}>
+              <Icon name="trash-can-outline" size={20} color="#EF4444" />
+            </View>
+            <Text style={styles.dangerText}>Clear All Favorites</Text>
+            <Icon name="chevron-right" size={20} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
+
+        {/* About App */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>ABOUT</Text>
+          <View style={styles.aboutCard}>
+            <Icon name="image-multiple-outline" size={32} color={colors.primary} />
+            <Text style={styles.aboutAppName}>AI Prompt Generator</Text>
+            <Text style={styles.aboutVersion}>Version 1.0.0</Text>
+            <Text style={styles.aboutTagline}>Curated prompts for creative minds.</Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* ── Privacy Policy Modal ── */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={privacyVisible}
+        onRequestClose={() => setPrivacyVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>🔒 Privacy Policy</Text>
+              <TouchableOpacity onPress={() => setPrivacyVisible(false)} style={styles.modalCloseBtn}>
+                <Icon name="close" size={24} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBody}>
+              <Text style={styles.policyHeading}>1. Introduction</Text>
+              <Text style={styles.policyParagraph}>
+                Welcome to AI Prompt Generator. We value your privacy and are committed to protecting your personal data. This privacy policy explains how we collect, use, and protect your information.
+              </Text>
+
+              <Text style={styles.policyHeading}>2. Data Collection</Text>
+              <Text style={styles.policyParagraph}>
+                Our app runs locally and stores your favorites locally on your device. We do not collect or transmit any of your personal details, saved items, or search queries to external servers.
+              </Text>
+
+              <Text style={styles.policyHeading}>3. Clipboard Access</Text>
+              <Text style={styles.policyParagraph}>
+                When you click "Copy Prompt" or "Use Gemini AI", the app copies text to your device clipboard so that you can easily paste it into image generation platforms. This data remains on your device.
+              </Text>
+
+              <Text style={styles.policyHeading}>4. Third-Party Services</Text>
+              <Text style={styles.policyParagraph}>
+                This application contains links to third-party AI generation tools (like Gemini, Leonardo AI, Canva, etc.). We encourage you to review their respective privacy policies when visiting their platforms.
+              </Text>
+
+              <Text style={styles.policyHeading}>5. Contact Us</Text>
+              <Text style={styles.policyParagraph}>
+                If you have any questions about this privacy policy, please contact our support desk at support@imageprompt.com.
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
@@ -238,5 +314,117 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     marginTop: 6,
     fontStyle: 'italic',
+  },
+
+  // Redesigned profile header styles
+  profileHeader: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F1F35',
+    marginBottom: 20,
+  },
+  avatarGradient: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    elevation: 8,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  profileEmail: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 4,
+  },
+
+  // Settings row styles
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#121222',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#1F1F35',
+  },
+  iconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  settingsLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: '#CBD5E1',
+    fontWeight: '600',
+  },
+
+  // Modal styles for Privacy Policy
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(9, 9, 15, 0.95)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#121222',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '80%',
+    borderWidth: 1,
+    borderColor: '#1F1F35',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F1F35',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1B1B32',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  policyHeading: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#A15DFB',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  policyParagraph: {
+    fontSize: 13,
+    color: '#94A3B8',
+    lineHeight: 20,
+    marginBottom: 8,
   },
 });

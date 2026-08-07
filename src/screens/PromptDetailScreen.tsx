@@ -13,6 +13,7 @@ import {
   Alert,
   FlatList,
   Animated,
+  Linking,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -77,6 +78,35 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
     }
   };
 
+  const handleGoToAI = () => {
+    Clipboard.setString(item.promptText);
+    if (Platform.OS === 'android') {
+      ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
+    }
+    Alert.alert(
+      "Use AI Generator",
+      "Select an AI tool to generate your image (prompt is copied to clipboard):",
+      [
+        {
+          text: "Leonardo AI",
+          onPress: () => Linking.openURL("https://leonardo.ai/")
+        },
+        {
+          text: "Bing Creator (DALL-E 3)",
+          onPress: () => Linking.openURL("https://www.bing.com/create")
+        },
+        {
+          text: "ChatGPT (DALL-E 3)",
+          onPress: () => Linking.openURL("https://chat.openai.com/")
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    );
+  };
+
   // Adjust scrollable content height to accommodate header & footer panels
   const contentHeight = SCREEN_HEIGHT - insets.top - insets.bottom - 52 - 80;
 
@@ -96,9 +126,9 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
               color={favored ? '#A15DFB' : '#FFF'}
             />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerBtn}>
+          {/* <TouchableOpacity style={styles.headerBtn}>
             <Icon name="dots-vertical" size={24} color="#FFF" />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
 
@@ -138,22 +168,27 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
           <Text style={styles.promptText}>{item.promptText}</Text>
         </View>
 
-        {/* ── Negative Prompt Section ── */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderTitle}>
-            <Icon name="shield-outline" size={18} color="#A15DFB" />
-            <Text style={styles.sectionLabel}>Negative Prompt</Text>
-          </View>
-          <TouchableOpacity style={styles.copyBtnTextWrap} onPress={handleCopyNegative}>
-            <Icon name="content-copy" size={14} color="#A15DFB" />
-            <Text style={styles.copyBtnText}>Copy</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.promptBox}>
-          <Text style={styles.promptText}>
-            blurry, low quality, distorted, bad anatomy, deformed, extra limbs, text, watermark, logo, signature
-          </Text>
-        </View>
+        <TouchableOpacity
+          style={styles.geminiBtn}
+          activeOpacity={0.85}
+          onPress={() => {
+            Clipboard.setString(item.promptText);
+            if (Platform.OS === 'android') {
+              ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
+            }
+            Linking.openURL("https://gemini.google.com/");
+          }}
+        >
+          <LinearGradient
+            colors={['#1A73E8', '#8B5CF6', '#EC4899']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.geminiBtnGradient}
+          >
+            <Icon name="creation" size={20} color="#FFF" style={{ marginRight: 8 }} />
+            <Text style={styles.geminiBtnText}>Use Gemini AI</Text>
+          </LinearGradient>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* ── Bottom Action Panel ── */}
@@ -165,7 +200,7 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
 
         <TouchableOpacity style={styles.bottomMainBtnContainer} onPress={handleCopy}>
           <LinearGradient
-            colors={['#A15DFB', '#8A2BE2']}
+            colors={colors.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.bottomMainBtn}
@@ -175,10 +210,6 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
           </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.bottomSecBtn}>
-          <Icon name="download" size={18} color="#A15DFB" style={{ marginRight: 6 }} />
-          <Text style={styles.bottomSecBtnText}>Download</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -275,6 +306,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 8,
     height: 52,
+    paddingRight: 15
   },
   headerBtn: {
     width: 44,
@@ -446,5 +478,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     marginTop: 4,
+  },
+  geminiBtn: {
+    width: '100%',
+    height: 52,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginTop: 16,
+    marginBottom: 24,
+    elevation: 4,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  geminiBtnGradient: {
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  geminiBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 });

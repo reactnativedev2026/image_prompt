@@ -2,6 +2,7 @@ export const colors = {
   primary: '#A15DFB', // Neon purple
   primaryLight: '#B882FF', // Lighter neon purple
   primaryDark: '#7B2CBF', // Darker neon purple
+  primaryGradient: ['#7E48F1', '#5A2EE3'] as [string, string], // Linear gradient colors from user screenshot
   background: '#09090F', // Dark near-black base background
   surface: '#121222', // Dark card surface
   surfaceLight: '#1B1B32', // Slightly lighter dark surface
@@ -16,3 +17,4 @@ export const colors = {
   share: '#A15DFB',
   copy: '#10B981',
 };
+

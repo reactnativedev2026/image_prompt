@@ -181,7 +181,7 @@ export const GalleryScreen = () => {
         </View>
         <TouchableOpacity style={styles.filterBtn} activeOpacity={0.8}>
           <LinearGradient
-            colors={['#A15DFB', '#8A2BE2']}
+            colors={colors.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.filterBtnGradient}
@@ -208,7 +208,7 @@ export const GalleryScreen = () => {
                   onPress={() => setSelectedCategory(item)}
                 >
                   <LinearGradient
-                    colors={['#A15DFB', '#8A2BE2']}
+                    colors={colors.primaryGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.pillActiveGradient}
