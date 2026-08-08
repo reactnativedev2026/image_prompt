@@ -4,6 +4,7 @@ import { StatusBar } from 'react-native';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initI18n } from './src/i18n';
 import { AppProvider } from './src/store/AppContext';
+import { CustomDrawer } from './src/components/CustomDrawer';
 
 const App = () => {
   useEffect(() => {
@@ -16,6 +17,7 @@ const App = () => {
       {/* <SafeAreaView edges={['top']} style={{ flex: 1 }}> */}
       <AppProvider>
         <AppNavigator />
+        <CustomDrawer />
       </AppProvider>
       {/* </SafeAreaView> */}
     </SafeAreaProvider>

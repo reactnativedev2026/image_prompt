@@ -3,6 +3,7 @@ export interface PromptItem {
   imageUrl: string;
   promptText: string;
   category: string;
+  viewCount?: number;
 }
 
 export const mockPrompts: PromptItem[] = [
