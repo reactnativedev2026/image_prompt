@@ -41,11 +41,12 @@ const getPromptDisplayMeta = (id: string, category: string) => {
   return metas[id] || { title: category + ' Item', rating: '3.0K' };
 };
 
-const AnimatedFavoriteCard = ({ item, index, navigation, toggleFavorite }: {
+const AnimatedFavoriteCard = ({ item, index, navigation, toggleFavorite, favorites }: {
   item: PromptItem;
   index: number;
   navigation: any;
   toggleFavorite: any;
+  favorites: PromptItem[];
 }) => {
   const scale = useRef(new Animated.Value(0.95)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -74,7 +75,7 @@ const AnimatedFavoriteCard = ({ item, index, navigation, toggleFavorite }: {
     <Animated.View style={[styles.cardContainer, { opacity, transform: [{ scale }] }]}>
       <TouchableOpacity
         activeOpacity={0.9}
-        onPress={() => navigation.navigate('PromptDetail', { item })}
+        onPress={() => navigation.navigate('PromptDetail', { item, promptsList: favorites })}
         style={styles.cardInner}
       >
         <Image source={{ uri: item.imageUrl }} style={styles.image} />
@@ -154,6 +155,7 @@ export const FavoritesScreen = () => {
               index={index}
               navigation={navigation}
               toggleFavorite={toggleFavorite}
+              favorites={favorites}
             />
           )}
           numColumns={3}

@@ -19,6 +19,8 @@ export const SettingsScreen = () => {
   const { clearFavorites } = useAppContext();
   const insets = useSafeAreaInsets();
   const [privacyVisible, setPrivacyVisible] = useState(false);
+  const [aboutVisible, setAboutVisible] = useState(false);
+  const [termsVisible, setTermsVisible] = useState(false);
 
   const handleClearFavorites = () => {
     Alert.alert(
@@ -113,6 +115,22 @@ export const SettingsScreen = () => {
             <Text style={styles.settingsLabel}>Privacy Policy</Text>
             <Icon name="chevron-right" size={20} color="#64748B" />
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingsRow} activeOpacity={0.7} onPress={() => setAboutVisible(true)}>
+            <View style={[styles.iconContainer, { backgroundColor: '#A15DFB15' }]}>
+              <Icon name="information-outline" size={20} color="#A15DFB" />
+            </View>
+            <Text style={styles.settingsLabel}>About Us</Text>
+            <Icon name="chevron-right" size={20} color="#64748B" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingsRow} activeOpacity={0.7} onPress={() => setTermsVisible(true)}>
+            <View style={[styles.iconContainer, { backgroundColor: '#F59E0B15' }]}>
+              <Icon name="file-document-outline" size={20} color="#F59E0B" />
+            </View>
+            <Text style={styles.settingsLabel}>Terms & Conditions</Text>
+            <Icon name="chevron-right" size={20} color="#64748B" />
+          </TouchableOpacity>
         </View>
 
         {/* Data Management */}
@@ -178,6 +196,75 @@ export const SettingsScreen = () => {
               <Text style={styles.policyHeading}>5. Contact Us</Text>
               <Text style={styles.policyParagraph}>
                 If you have any questions about this privacy policy, please contact our support desk at support@imageprompt.com.
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── About Us Modal ── */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={aboutVisible}
+        onRequestClose={() => setAboutVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>ℹ️ About Us</Text>
+              <TouchableOpacity onPress={() => setAboutVisible(false)} style={styles.modalCloseBtn}>
+                <Icon name="close" size={24} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBody}>
+              <Text style={styles.policyHeading}>Who We Are</Text>
+              <Text style={styles.policyParagraph}>
+                We are a passionate team of developers and AI enthusiasts dedicated to making AI image generation accessible to everyone. Our app helps creators, designers, and hobbyists discover high-quality, pre-tested prompts to use with popular AI engines like Midjourney, DALL-E, and Gemini.
+              </Text>
+              <Text style={styles.policyHeading}>Our Mission</Text>
+              <Text style={styles.policyParagraph}>
+                To bridge the gap between imagination and digital art by providing beautifully structured prompts that consistently yield spectacular visual assets.
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Terms & Conditions Modal ── */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={termsVisible}
+        onRequestClose={() => setTermsVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>📄 Terms & Conditions</Text>
+              <TouchableOpacity onPress={() => setTermsVisible(false)} style={styles.modalCloseBtn}>
+                <Icon name="close" size={24} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBody}>
+              <Text style={styles.policyHeading}>1. Acceptance of Terms</Text>
+              <Text style={styles.policyParagraph}>
+                By accessing or using AI Prompt Generator, you agree to comply with and be bound by these Terms and Conditions.
+              </Text>
+
+              <Text style={styles.policyHeading}>2. Prompt Usage License</Text>
+              <Text style={styles.policyParagraph}>
+                All prompts provided in the app are free to use for personal or commercial creative outputs. You may modify and input them into any third-party AI platform. However, resale or redistribution of our raw prompt collections as a competing product is strictly prohibited.
+              </Text>
+
+              <Text style={styles.policyHeading}>3. Disclaimer of Warranties</Text>
+              <Text style={styles.policyParagraph}>
+                Prompt outputs can vary based on model configurations, platform updates, and random seeding. We do not guarantee identical outputs when running these prompts on third-party generators.
+              </Text>
+
+              <Text style={styles.policyHeading}>4. Amendments</Text>
+              <Text style={styles.policyParagraph}>
+                We reserve the right to modify these terms at any time. Continued use of the app implies acceptance of the updated terms.
               </Text>
             </ScrollView>
           </View>

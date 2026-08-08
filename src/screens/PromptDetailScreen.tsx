@@ -14,6 +14,9 @@ import {
   FlatList,
   Animated,
   Linking,
+  TextInput,
+  TouchableWithoutFeedback,
+  Modal,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -59,6 +62,7 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
   const { isFavorite, toggleFavorite } = useAppContext();
   const meta = getPromptDisplayMeta(item.id, item.category);
   const favored = isFavorite(item.id);
+  const [promptModalVisible, setPromptModalVisible] = React.useState(false);
 
   const handleCopy = () => {
     Clipboard.setString(item.promptText);
@@ -107,8 +111,8 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
     );
   };
 
-  // Adjust scrollable content height to accommodate header & footer panels
-  const contentHeight = SCREEN_HEIGHT - insets.top - insets.bottom - 52 - 80;
+  // Adjust scrollable content height to accommodate header panel
+  const contentHeight = SCREEN_HEIGHT - insets.top - insets.bottom - 52;
 
   return (
     <View style={[styles.reelItemContainer, { height: SCREEN_HEIGHT }]}>
@@ -135,10 +139,11 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        style={{ height: contentHeight }}
+        style={{ flex: 1 }}
       >
         {/* ── Main Hero Image Box ── */}
         <View style={styles.imageContainer}>
+          <Image source={{ uri: item.imageUrl }} style={StyleSheet.absoluteFillObject} blurRadius={20} />
           <Image source={{ uri: item.imageUrl }} style={styles.heroImage} />
         </View>
 
@@ -159,58 +164,147 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
             <Icon name="creation" size={18} color="#A15DFB" />
             <Text style={styles.sectionLabel}>Prompt</Text>
           </View>
-          <TouchableOpacity style={styles.copyBtnTextWrap} onPress={handleCopy}>
-            <Icon name="content-copy" size={14} color="#A15DFB" />
-            <Text style={styles.copyBtnText}>Copy</Text>
+          <View style={{ flexDirection: 'row', gap: 14 }}>
+            <TouchableOpacity style={styles.copyBtnTextWrap} onPress={handleShare}>
+              <Icon name="share-variant" size={14} color="#A15DFB" />
+              <Text style={styles.copyBtnText}>Share</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.copyBtnTextWrap} onPress={handleCopy}>
+              <Icon name="content-copy" size={14} color="#A15DFB" />
+              <Text style={styles.copyBtnText}>Copy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setPromptModalVisible(true)}
+          style={styles.promptBox}
+        >
+          <ScrollView
+            style={{ maxHeight: SCREEN_HEIGHT * 0.15 }}
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+            pointerEvents="none"
+          >
+            <Text style={styles.promptText}>{item.promptText}</Text>
+          </ScrollView>
+        </TouchableOpacity>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.rowBtn, { shadowColor: '#8B5CF6' }]}
+            activeOpacity={0.85}
+            onPress={async () => {
+              Clipboard.setString(item.promptText);
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
+              }
+              const geminiWeb = "https://gemini.google.com/";
+              const googleApp = "googleapp://";
+              try {
+                const supported = await Linking.canOpenURL(googleApp);
+                if (supported) {
+                  try {
+                    await Linking.openURL(googleApp);
+                  } catch (err) {
+                    // Suppress rejections from task switching
+                  }
+                } else {
+                  await Linking.openURL(geminiWeb);
+                }
+              } catch (e) {
+                Linking.openURL(geminiWeb);
+              }
+            }}
+          >
+            <LinearGradient
+              colors={['#1A73E8', '#8B5CF6', '#EC4899']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.geminiBtnGradient}
+            >
+              <Icon name="creation" size={18} color="#FFF" style={{ marginRight: 6 }} />
+              <Text style={styles.geminiBtnText}>Gemini AI</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.rowBtn, { shadowColor: '#10A37F' }]}
+            activeOpacity={0.85}
+            onPress={async () => {
+              Clipboard.setString(item.promptText);
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
+              }
+              const chatgptWeb = "https://chatgpt.com/";
+              const chatgptApp = "chatgpt://";
+              try {
+                const supported = await Linking.canOpenURL(chatgptApp);
+                if (supported) {
+                  try {
+                    await Linking.openURL(chatgptApp);
+                  } catch (err) {
+                    // Suppress rejections from task switching
+                  }
+                } else {
+                  await Linking.openURL(chatgptWeb);
+                }
+              } catch (e) {
+                Linking.openURL(chatgptWeb);
+              }
+            }}
+          >
+            <LinearGradient
+              colors={['#10A37F', '#1A7F64']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.geminiBtnGradient}
+            >
+              <Icon name="robot-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
+              <Text style={styles.geminiBtnText}>ChatGPT AI</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
-        <View style={styles.promptBox}>
-          <Text style={styles.promptText}>{item.promptText}</Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.geminiBtn}
-          activeOpacity={0.85}
-          onPress={() => {
-            Clipboard.setString(item.promptText);
-            if (Platform.OS === 'android') {
-              ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
-            }
-            Linking.openURL("https://gemini.google.com/");
-          }}
-        >
-          <LinearGradient
-            colors={['#1A73E8', '#8B5CF6', '#EC4899']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.geminiBtnGradient}
-          >
-            <Icon name="creation" size={20} color="#FFF" style={{ marginRight: 8 }} />
-            <Text style={styles.geminiBtnText}>Use Gemini AI</Text>
-          </LinearGradient>
-        </TouchableOpacity>
       </ScrollView>
 
-      {/* ── Bottom Action Panel ── */}
-      <View style={[styles.bottomPanel, { paddingBottom: Math.max(insets.bottom + 8, 12) }]}>
-        <TouchableOpacity style={styles.bottomSecBtn} onPress={handleShare}>
-          <Icon name="share-variant" size={18} color="#A15DFB" style={{ marginRight: 6 }} />
-          <Text style={styles.bottomSecBtnText}>Share</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.bottomMainBtnContainer} onPress={handleCopy}>
-          <LinearGradient
-            colors={colors.primaryGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.bottomMainBtn}
-          >
-            <Icon name="content-copy" size={18} color="#FFF" style={{ marginRight: 6 }} />
-            <Text style={styles.bottomMainBtnText}>Copy Prompt</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-      </View>
+      {/* ── Full Screen Prompt Modal ── */}
+      <Modal
+        visible={promptModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setPromptModalVisible(false)}
+      >
+        <View style={styles.promptModalOverlay}>
+          <View style={styles.promptModalContent}>
+            <View style={styles.promptModalHeader}>
+              <Text style={styles.promptModalTitle}>📝 Full Prompt</Text>
+              <TouchableOpacity onPress={() => setPromptModalVisible(false)} style={styles.promptModalCloseBtn}>
+                <Icon name="close" size={24} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.promptModalBody}>
+              <Text style={styles.promptModalText}>{item.promptText}</Text>
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.modalCopyBtn}
+              onPress={() => {
+                handleCopy();
+                setPromptModalVisible(false);
+              }}
+            >
+              <LinearGradient
+                colors={colors.primaryGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.modalCopyBtnGradient}
+              >
+                <Icon name="content-copy" size={18} color="#FFF" style={{ marginRight: 6 }} />
+                <Text style={styles.modalCopyBtnText}>Copy & Close</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -218,14 +312,14 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
 export const PromptDetailScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { item } = route.params as { item: PromptItem };
+  const { item, promptsList = mockPrompts } = route.params as { item: PromptItem; promptsList?: PromptItem[] };
   const insets = useSafeAreaInsets();
 
   const [showGuide, setShowGuide] = React.useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
 
-  const initialIndex = mockPrompts.findIndex(p => p.id === item.id);
+  const initialIndex = promptsList.findIndex(p => p.id === item.id);
   const safeInitialIndex = initialIndex !== -1 ? initialIndex : 0;
 
   React.useEffect(() => {
@@ -263,7 +357,7 @@ export const PromptDetailScreen = () => {
   return (
     <View style={styles.root}>
       <FlatList
-        data={mockPrompts}
+        data={promptsList}
         keyExtractor={item => item.id}
         pagingEnabled
         showsVerticalScrollIndicator={false}
@@ -328,7 +422,7 @@ const styles = StyleSheet.create({
   // Hero Image Container
   imageContainer: {
     width: '100%',
-    height: 230,
+    height: SCREEN_HEIGHT * 0.40,
     borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: '#121222',
@@ -336,7 +430,7 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    resizeMode: 'contain',
   },
 
   // Title
@@ -479,15 +573,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 4,
   },
-  geminiBtn: {
-    width: '100%',
-    height: 52,
-    borderRadius: 16,
-    overflow: 'hidden',
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
     marginTop: 16,
     marginBottom: 24,
+  },
+  rowBtn: {
+    flex: 1,
+    height: 50,
+    borderRadius: 16,
+    overflow: 'hidden',
     elevation: 4,
-    shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -504,5 +602,71 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 0.5,
+  },
+
+  // Prompt Modal Styles
+  promptModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(9, 9, 15, 0.95)',
+    justifyContent: 'flex-end',
+  },
+  promptModalContent: {
+    backgroundColor: '#121222',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '65%',
+    borderWidth: 1,
+    borderColor: '#1F1F35',
+    paddingBottom: 30,
+  },
+  promptModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F1F35',
+  },
+  promptModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  promptModalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1B1B32',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  promptModalBody: {
+    padding: 20,
+  },
+  promptModalText: {
+    fontSize: 16,
+    color: '#CBD5E1',
+    lineHeight: 24,
+    fontWeight: '500',
+  },
+  modalCopyBtn: {
+    height: 48,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginHorizontal: 20,
+    marginTop: 10,
+  },
+  modalCopyBtnGradient: {
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCopyBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

@@ -9,6 +9,8 @@ interface AppContextProps {
   clearFavorites: () => void;
   defaultTool: string;
   setDefaultTool: (tool: string) => void;
+  drawerOpen: boolean;
+  setDrawerOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -16,6 +18,7 @@ const AppContext = createContext<AppContextProps | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [favorites, setFavorites] = useState<PromptItem[]>([]);
   const [defaultTool, setDefaultToolState] = useState<string>('Gemini');
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
 
   useEffect(() => {
     loadData();
@@ -80,7 +83,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       isFavorite,
       clearFavorites,
       defaultTool,
-      setDefaultTool
+      setDefaultTool,
+      drawerOpen,
+      setDrawerOpen
     }}>
       {children}
     </AppContext.Provider>
