@@ -143,9 +143,25 @@ export const GalleryScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [dbCategories, setDbCategories] = useState<ApiCategory[]>([]);
 
+  // Scroll to Top ref and state
+  const flatListRef = useRef<FlatList>(null);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
+
   // Filter Modal & Sorting state
   const [filterVisible, setFilterVisible] = useState(false);
   const [sortBy, setSortBy] = useState<'default' | 'views' | 'alphabetical'>('default');
+
+  const shufflePrompts = () => {
+    setSortBy('default');
+    setPrompts((prevPrompts) => {
+      const shuffled = [...prevPrompts];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    });
+  };
 
   const loadData = async (showLoadingIndicator = true) => {
     if (showLoadingIndicator) setLoading(true);
@@ -318,6 +334,7 @@ export const GalleryScreen = () => {
         </View>
       ) : (
         <FlatList
+          ref={flatListRef}
           data={sortedPrompts}
           keyExtractor={i => i.id}
           renderItem={({ item, index }) => (
@@ -332,8 +349,18 @@ export const GalleryScreen = () => {
           )}
           numColumns={3}
           columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.gridContent}
+          contentContainerStyle={[styles.gridContent, { flexGrow: 1 }]}
           showsVerticalScrollIndicator={false}
+          alwaysBounceVertical={true}
+          onScroll={(event) => {
+            const offsetY = event.nativeEvent.contentOffset.y;
+            if (offsetY > 300) {
+              setShowScrollToTop(true);
+            } else {
+              setShowScrollToTop(false);
+            }
+          }}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -349,6 +376,40 @@ export const GalleryScreen = () => {
             </View>
           }
         />
+      )}
+
+      <TouchableOpacity
+        style={styles.shuffleBtn}
+        onPress={shufflePrompts}
+        activeOpacity={0.8}
+      >
+        <LinearGradient
+          colors={colors.primaryGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.shuffleGradient}
+        >
+          <Icon name="shuffle-variant" size={24} color="#FFF" />
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {showScrollToTop && (
+        <TouchableOpacity
+          style={styles.scrollToTopBtn}
+          onPress={() => {
+            flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+          }}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={colors.primaryGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.scrollToTopGradient}
+          >
+            <Icon name="arrow-up" size={26} color="#FFF" />
+          </LinearGradient>
+        </TouchableOpacity>
       )}
 
       {/* ── Filter / Sort Modal ── */}
@@ -368,7 +429,7 @@ export const GalleryScreen = () => {
             </View>
             <View style={styles.modalBody}>
               <Text style={styles.filterSectionLabel}>SORT PROMPTS BY</Text>
-              
+
               <TouchableOpacity
                 style={[styles.filterOption, sortBy === 'default' && styles.filterOptionActive]}
                 onPress={() => setSortBy('default')}
@@ -675,6 +736,48 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800',
+  },
+  scrollToTopBtn: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    zIndex: 10,
+  },
+  scrollToTopGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shuffleBtn: {
+    position: 'absolute',
+    bottom: 24,
+    left: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    zIndex: 10,
+  },
+  shuffleGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

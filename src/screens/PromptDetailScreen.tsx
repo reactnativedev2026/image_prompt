@@ -29,6 +29,17 @@ import { colors } from '../theme/colors';
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+const AI_TOOLS = [
+  { name: 'Gemini', url: 'https://gemini.google.com/', appUrl: 'googleapp://', color: '#4285F4', icon: 'google', gradientColors: ['#1A73E8', '#8B5CF6', '#EC4899'] },
+  { name: 'ChatGPT', url: 'https://chat.openai.com/', appUrl: 'chatgpt://', color: '#10A37F', icon: 'robot-outline', gradientColors: ['#10A37F', '#1A7F64'] },
+  { name: 'Canva', url: 'https://www.canva.com/ai-image-generator/', appUrl: 'canva://', color: '#7D2AE8', icon: 'palette', gradientColors: ['#7D2AE8', '#5E1FB3'] },
+  { name: 'Bing Creator', url: 'https://www.bing.com/create', appUrl: 'bing://', color: '#008373', icon: 'microsoft-bing', gradientColors: ['#008373', '#005E52'] },
+  { name: 'Leonardo AI', url: 'https://leonardo.ai/', appUrl: 'leonardoai://', color: '#FF7043', icon: 'brush', gradientColors: ['#FF7043', '#D84315'] },
+  { name: 'Ideogram', url: 'https://ideogram.ai/', appUrl: 'ideogram://', color: '#263238', icon: 'format-text', gradientColors: ['#263238', '#1A237E'] },
+  { name: 'Playground', url: 'https://playground.com/', appUrl: 'playground://', color: '#EC407A', icon: 'controller-classic', gradientColors: ['#EC407A', '#C2185B'] },
+  { name: 'Adobe Firefly', url: 'https://firefly.adobe.com/', appUrl: 'adobe://', color: '#E53935', icon: 'fire', gradientColors: ['#E53935', '#B71C1C'] },
+];
+
 const getPromptDisplayMeta = (id: string, category: string) => {
   const metas: Record<string, { title: string; rating: string }> = {
     '1': { title: 'Cyberpunk City', rating: '4.8K' },
@@ -69,10 +80,6 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
     showCopiedToast();
   };
 
-  const handleCopyNegative = () => {
-    Clipboard.setString("blurry, low quality, distorted, bad anatomy, deformed, extra limbs, text, watermark, logo, signature");
-    showCopiedToast();
-  };
 
   const handleShare = async () => {
     try {
@@ -190,81 +197,65 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
           </ScrollView>
         </TouchableOpacity>
 
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[styles.rowBtn, { shadowColor: '#8B5CF6' }]}
-            activeOpacity={0.85}
-            onPress={async () => {
-              Clipboard.setString(item.promptText);
-              if (Platform.OS === 'android') {
-                ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
-              }
-              const geminiWeb = "https://gemini.google.com/";
-              const googleApp = "googleapp://";
-              try {
-                const supported = await Linking.canOpenURL(googleApp);
-                if (supported) {
-                  try {
-                    await Linking.openURL(googleApp);
-                  } catch (err) {
-                    // Suppress rejections from task switching
-                  }
-                } else {
-                  await Linking.openURL(geminiWeb);
-                }
-              } catch (e) {
-                Linking.openURL(geminiWeb);
-              }
-            }}
-          >
-            <LinearGradient
-              colors={['#1A73E8', '#8B5CF6', '#EC4899']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.geminiBtnGradient}
-            >
-              <Icon name="creation" size={18} color="#FFF" style={{ marginRight: 6 }} />
-              <Text style={styles.geminiBtnText}>Gemini AI</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollBtnRow}
+          style={{ marginTop: 16, marginBottom: 24 }}
+        >
+          {AI_TOOLS.map((tool) => (
+            <TouchableOpacity
+              key={tool.name}
+              style={[styles.scrollRowBtn, { shadowColor: tool.color }]}
+              activeOpacity={0.85}
+              onPress={async () => {
+                Clipboard.setString(item.promptText);
 
-          <TouchableOpacity
-            style={[styles.rowBtn, { shadowColor: '#10A37F' }]}
-            activeOpacity={0.85}
-            onPress={async () => {
-              Clipboard.setString(item.promptText);
-              if (Platform.OS === 'android') {
-                ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
-              }
-              const chatgptWeb = "https://chatgpt.com/";
-              const chatgptApp = "chatgpt://";
-              try {
-                const supported = await Linking.canOpenURL(chatgptApp);
-                if (supported) {
+                if (Platform.OS === 'android') {
+                  ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
+                }
+
+                if (tool.appUrl) {
                   try {
-                    await Linking.openURL(chatgptApp);
-                  } catch (err) {
-                    // Suppress rejections from task switching
+                    await Linking.openURL(tool.appUrl);
+                  } catch (error: any) {
+                    const errMsg = String(error?.message || '');
+                    const isActivityNotFound =
+                      errMsg.toLowerCase().includes('no activity found') ||
+                      errMsg.toLowerCase().includes('activitynotfound') ||
+                      Platform.OS === 'ios';
+
+                    if (isActivityNotFound) {
+                      try {
+                        await Linking.openURL(tool.url);
+                      } catch (webError) {
+                        console.log(`Unable to open ${tool.name} web:`, webError);
+                      }
+                    } else {
+                      console.log(`${tool.name} app likely opened, ignoring fallback error:`, error);
+                    }
                   }
                 } else {
-                  await Linking.openURL(chatgptWeb);
+                  try {
+                    await Linking.openURL(tool.url);
+                  } catch (webError) {
+                    console.log(`Unable to open ${tool.name} web:`, webError);
+                  }
                 }
-              } catch (e) {
-                Linking.openURL(chatgptWeb);
-              }
-            }}
-          >
-            <LinearGradient
-              colors={['#10A37F', '#1A7F64']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.geminiBtnGradient}
+              }}
             >
-              <Icon name="robot-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
-              <Text style={styles.geminiBtnText}>ChatGPT AI</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+              <LinearGradient
+                colors={tool.gradientColors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.geminiBtnGradient}
+              >
+                <Icon name={tool.icon} size={18} color="#FFF" style={{ marginRight: 6 }} />
+                <Text style={styles.geminiBtnText}>{tool.name}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </ScrollView>
 
       {/* ── Full Screen Prompt Modal ── */}
@@ -582,6 +573,21 @@ const styles = StyleSheet.create({
   },
   rowBtn: {
     flex: 1,
+    height: 50,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  scrollBtnRow: {
+    paddingLeft: 4,
+    paddingRight: 20,
+    gap: 12,
+  },
+  scrollRowBtn: {
+    width: 145,
     height: 50,
     borderRadius: 16,
     overflow: 'hidden',
