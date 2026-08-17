@@ -295,67 +295,70 @@ export default function Prompts() {
         </Box>
       ) : (
         <>
-          <Grid container spacing={3}>
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' }, 
+            gap: 3 
+          }}>
             {prompts.length === 0 ? (
-              <Grid item xs={12}>
-                <Typography align="center" color="text.secondary">
+              <Box sx={{ gridColumn: '1 / -1', textAlign: 'center', py: 4 }}>
+                <Typography color="text.secondary">
                   No prompts found matching the criteria.
                 </Typography>
-              </Grid>
+              </Box>
             ) : (
               prompts.map((prompt) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={prompt.id}>
-                  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-4px)' } }}>
-                    <CardActionArea onClick={() => handleOpenDetail(prompt)} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                      <CardMedia
-                        component="img"
-                        height="200"
-                        image={prompt.image_url}
-                        alt={prompt.prompt_text}
-                        sx={{ objectFit: 'cover' }}
-                      />
-                      <CardContent sx={{ flexGrow: 1 }}>
-                        <Typography variant="caption" color="primary" fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }} gutterBottom>
-                          {categories.find((c) => c.id === prompt.category_id)?.name || 'Uncategorized'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{
-                          display: '-webkit-box',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          mt: 1
-                        }}>
-                          {prompt.prompt_text}
-                        </Typography>
-                      </CardContent>
-                    </CardActionArea>
-                    <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5, borderTop: '1px solid #f1f5f9' }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Views: {prompt.view_count || 0}
+                <Card key={prompt.id} sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-4px)' } }}>
+                  <CardActionArea onClick={() => handleOpenDetail(prompt)} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+                    <CardMedia
+                      component="img"
+                      height="200"
+                      image={prompt.image_url}
+                      alt={prompt.prompt_text}
+                      sx={{ objectFit: 'cover', width: '100%' }}
+                    />
+                    <CardContent sx={{ flexGrow: 1, width: '100%', boxSizing: 'border-box' }}>
+                      <Typography variant="caption" color="primary" fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }} gutterBottom>
+                        {categories.find((c) => c.id === prompt.category_id)?.name || 'Uncategorized'}
                       </Typography>
-                      <Box>
-                        <Tooltip title="Copy Prompt">
-                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCopyPrompt(prompt.prompt_text); }}>
-                            <ContentCopyIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit">
-                          <IconButton size="small" color="primary" onClick={(e) => handleOpenEdit(prompt, e)}>
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton size="small" color="error" onClick={(e) => handleDeletePrompt(prompt.id, e)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </CardActions>
-                  </Card>
-                </Grid>
+                      <Typography variant="body2" color="text.secondary" sx={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        wordBreak: 'break-word',
+                        mt: 1
+                      }}>
+                        {prompt.prompt_text}
+                      </Typography>
+                    </CardContent>
+                  </CardActionArea>
+                  <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5, borderTop: '1px solid #f1f5f9' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Views: {prompt.view_count || 0}
+                    </Typography>
+                    <Box>
+                      <Tooltip title="Copy Prompt">
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCopyPrompt(prompt.prompt_text); }}>
+                          <ContentCopyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit">
+                        <IconButton size="small" color="primary" onClick={(e) => handleOpenEdit(prompt, e)}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton size="small" color="error" onClick={(e) => handleDeletePrompt(prompt.id, e)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </CardActions>
+                </Card>
               ))
             )}
-          </Grid>
+          </Box>
 
           {/* Pagination */}
           <Box display="flex" justifyContent="center" mt={4}>

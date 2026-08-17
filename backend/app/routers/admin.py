@@ -126,6 +126,14 @@ def delete_category(
 
 
 # ── Prompt Management (Admin only) ──
+import re
+
+def sanitize_for_filename(text: str, max_len: int = 30) -> str:
+    # Remove non-alphanumeric, replace with underscore, limit length
+    safe_text = "".join(c if c.isalnum() else "_" for c in text)
+    safe_text = re.sub(r"_+", "_", safe_text)
+    return safe_text[:max_len].strip("_")
+
 @router.post("/prompts", response_model=PromptResponse, status_code=status.HTTP_201_CREATED)
 def create_prompt(
     payload: PromptCreateRequest,
@@ -147,6 +155,22 @@ def create_prompt(
     db.add(new_prompt)
     db.commit()
     db.refresh(new_prompt)
+    
+    # Rename image on Cloudinary to include ID and prompt text
+    match = re.search(r'/upload/(?:v\d+/)?(ai_prompt_gallery/[^.]+)', new_prompt.image_url)
+    if match:
+        old_public_id = match.group(1)
+        safe_cat_name = sanitize_for_filename(cat.name, 20)
+        short_prompt = sanitize_for_filename(new_prompt.prompt_text, 30)
+        new_public_id = f"ai_prompt_gallery/{safe_cat_name}/{safe_cat_name}_prompt_{new_prompt.id}_{short_prompt}"
+        
+        try:
+            rename_res = cloudinary.uploader.rename(old_public_id, new_public_id, overwrite=True)
+            new_prompt.image_url = rename_res.get("secure_url")
+            db.commit()
+        except Exception as e:
+            print(f"Cloudinary rename failed: {e}")
+
     return new_prompt
 
 
@@ -173,13 +197,35 @@ def update_prompt(
             )
         prompt.category_id = payload.category_id
 
-    if payload.image_url is not None:
+    image_changed = False
+    if payload.image_url is not None and payload.image_url != prompt.image_url:
         prompt.image_url = payload.image_url
+        image_changed = True
         
     if payload.prompt_text is not None:
         prompt.prompt_text = payload.prompt_text
 
     db.commit()
+    
+    # If a new image was uploaded, rename it properly
+    if image_changed:
+        # We need the category name, fetch it again if we haven't already
+        cat_for_rename = cat if 'cat' in locals() and cat else db.query(Category).filter(Category.id == prompt.category_id).first()
+        
+        match = re.search(r'/upload/(?:v\d+/)?(ai_prompt_gallery/[^.]+)', prompt.image_url)
+        if match and cat_for_rename:
+            old_public_id = match.group(1)
+            safe_cat_name = sanitize_for_filename(cat_for_rename.name, 20)
+            short_prompt = sanitize_for_filename(prompt.prompt_text, 30)
+            new_public_id = f"ai_prompt_gallery/{safe_cat_name}/{safe_cat_name}_prompt_{prompt.id}_{short_prompt}"
+            
+            try:
+                rename_res = cloudinary.uploader.rename(old_public_id, new_public_id, overwrite=True)
+                prompt.image_url = rename_res.get("secure_url")
+                db.commit()
+            except Exception as e:
+                print(f"Cloudinary rename failed during update: {e}")
+
     db.refresh(prompt)
     return prompt
 

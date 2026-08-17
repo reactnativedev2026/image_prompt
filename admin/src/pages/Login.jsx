@@ -9,7 +9,8 @@ import {
   Paper,
   Alert,
   Tabs,
-  Tab
+  Tab,
+  CircularProgress
 } from '@mui/material';
 import api from '../api';
 
@@ -19,6 +20,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleTabChange = (event, newValue) => {
@@ -31,6 +33,7 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setLoading(true);
 
     try {
       if (activeTab === 0) {
@@ -47,6 +50,8 @@ export default function Login() {
       }
     } catch (err) {
       setError(err.response?.data?.detail || 'An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,9 +108,10 @@ export default function Login() {
             color="primary"
             fullWidth
             size="large"
+            disabled={loading}
             sx={{ mt: 3, mb: 1, borderRadius: 2 }}
           >
-            {activeTab === 0 ? 'Login' : 'Register'}
+            {loading ? <CircularProgress size={24} /> : (activeTab === 0 ? 'Login' : 'Register')}
           </Button>
         </form>
       </Paper>
