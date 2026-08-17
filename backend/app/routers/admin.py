@@ -166,6 +166,11 @@ def create_prompt(
         
         try:
             rename_res = cloudinary.uploader.rename(old_public_id, new_public_id, overwrite=True)
+            # Update the display name on Cloudinary dashboard
+            try:
+                cloudinary.uploader.explicit(new_public_id, type="upload", display_name=short_prompt)
+            except Exception as display_err:
+                print(f"Failed to update display name on Cloudinary: {display_err}")
             new_prompt.image_url = rename_res.get("secure_url")
             db.commit()
         except Exception as e:
@@ -221,6 +226,11 @@ def update_prompt(
             
             try:
                 rename_res = cloudinary.uploader.rename(old_public_id, new_public_id, overwrite=True)
+                # Update the display name on Cloudinary dashboard
+                try:
+                    cloudinary.uploader.explicit(new_public_id, type="upload", display_name=short_prompt)
+                except Exception as display_err:
+                    print(f"Failed to update display name on Cloudinary during update: {display_err}")
                 prompt.image_url = rename_res.get("secure_url")
                 db.commit()
             except Exception as e:
