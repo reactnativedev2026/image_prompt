@@ -27,9 +27,11 @@ git push -u origin main
 ## 3. Configure Environment Variables on Render
 Click on the **Environment** tab inside your Render Web Service dashboard and add the following keys:
 - `DATABASE_URL` = `your_neon_postgresql_url`
-- `CLOUDINARY_CLOUD_NAME` = `your_cloudinary_cloud_name`
-- `CLOUDINARY_API_KEY` = `your_cloudinary_api_key`
-- `CLOUDINARY_API_SECRET` = `your_cloudinary_api_secret`
+- `AWS_ACCESS_KEY_ID` = `your_aws_access_key_id`
+- `AWS_SECRET_ACCESS_KEY` = `your_aws_secret_access_key`
+- `AWS_REGION` = `us-east-1` (or your bucket region)
+- `AWS_S3_BUCKET_NAME` = `your_s3_bucket_name`
+- `AWS_S3_CUSTOM_DOMAIN` = (optional CDN / CloudFront URL)
 - `JWT_SECRET` = `your_jwt_secret_key`
 
 Click **Save Changes**. Render will automatically build, link your Neon DB, and deploy your API!

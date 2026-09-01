@@ -1,7 +1,6 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
-import cloudinary
-import cloudinary.uploader
 from app.database import get_db
 from app.config import settings
 from app.models import Admin, Category, Prompt
@@ -11,14 +10,7 @@ from app.schemas.models_schema import (
     PromptCreateRequest, PromptResponse, PromptUpdateRequest
 )
 from app.routers.auth_utils import hash_password, verify_password, create_access_token, get_current_admin
-
-# Initialize Cloudinary configs
-cloudinary.config(
-    cloud_name=settings.CLOUDINARY_CLOUD_NAME,
-    api_key=settings.CLOUDINARY_API_KEY,
-    api_secret=settings.CLOUDINARY_API_SECRET,
-    secure=True
-)
+from app.services.s3 import upload_image_to_s3, rename_or_move_s3_image
 
 router = APIRouter(
     prefix="/api/admin",
@@ -63,28 +55,29 @@ def login_admin(payload: AdminLoginRequest, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer"}
 
 
-# ── Cloudinary Media Upload API ──
+# ── AWS S3 Media Upload API ──
 @router.post("/upload", status_code=status.HTTP_200_OK)
 def upload_image(
     file: UploadFile = File(...),
     current_admin: str = Depends(get_current_admin)
 ):
     try:
-        # Upload the file bytes directly to Cloudinary and force convert to WebP
-        upload_result = cloudinary.uploader.upload(
+        # Upload the file bytes directly to AWS S3 and convert to WebP
+        upload_result = upload_image_to_s3(
             file.file,
+            filename=file.filename or "image.jpg",
             folder="ai_prompt_gallery",
-            resource_type="image",
-            format="webp"  # Forces Cloudinary to convert the image to WebP format
+            convert_to_webp=True
         )
         return {
-            "image_url": upload_result.get("secure_url"),
-            "public_id": upload_result.get("public_id")
+            "image_url": upload_result.get("image_url"),
+            "public_id": upload_result.get("key"),
+            "key": upload_result.get("key")
         }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Cloudinary upload failed: {str(e)}"
+            detail=f"S3 upload failed: {str(e)}"
         )
 
 
@@ -126,13 +119,12 @@ def delete_category(
 
 
 # ── Prompt Management (Admin only) ──
-import re
-
 def sanitize_for_filename(text: str, max_len: int = 30) -> str:
     # Remove non-alphanumeric, replace with underscore, limit length
     safe_text = "".join(c if c.isalnum() else "_" for c in text)
     safe_text = re.sub(r"_+", "_", safe_text)
     return safe_text[:max_len].strip("_")
+
 
 @router.post("/prompts", response_model=PromptResponse, status_code=status.HTTP_201_CREATED)
 def create_prompt(
@@ -156,25 +148,19 @@ def create_prompt(
     db.commit()
     db.refresh(new_prompt)
     
-    # Rename image on Cloudinary to include ID and prompt text
-    match = re.search(r'/upload/(?:v\d+/)?(ai_prompt_gallery/[^.]+)', new_prompt.image_url)
-    if match:
-        old_public_id = match.group(1)
+    # Organize image on S3 to include Category and prompt text
+    if new_prompt.image_url:
         safe_cat_name = sanitize_for_filename(cat.name, 20)
         short_prompt = sanitize_for_filename(new_prompt.prompt_text, 30)
-        new_public_id = f"ai_prompt_gallery/{safe_cat_name}/{safe_cat_name}_prompt_{new_prompt.id}_{short_prompt}"
+        new_s3_key = f"ai_prompt_gallery/{safe_cat_name}/{safe_cat_name}_prompt_{new_prompt.id}_{short_prompt}.webp"
         
         try:
-            rename_res = cloudinary.uploader.rename(old_public_id, new_public_id, overwrite=True)
-            # Update the display name on Cloudinary dashboard
-            try:
-                cloudinary.uploader.explicit(new_public_id, type="upload", display_name=short_prompt)
-            except Exception as display_err:
-                print(f"Failed to update display name on Cloudinary: {display_err}")
-            new_prompt.image_url = rename_res.get("secure_url")
-            db.commit()
+            updated_url = rename_or_move_s3_image(new_prompt.image_url, new_s3_key)
+            if updated_url != new_prompt.image_url:
+                new_prompt.image_url = updated_url
+                db.commit()
         except Exception as e:
-            print(f"Cloudinary rename failed: {e}")
+            print(f"S3 file organize failed: {e}")
 
     return new_prompt
 
@@ -193,6 +179,7 @@ def update_prompt(
             detail="Prompt not found"
         )
     
+    cat = None
     if payload.category_id is not None:
         cat = db.query(Category).filter(Category.id == payload.category_id).first()
         if not cat:
@@ -212,29 +199,21 @@ def update_prompt(
 
     db.commit()
     
-    # If a new image was uploaded, rename it properly
+    # If a new image was uploaded, organize it on S3
     if image_changed:
-        # We need the category name, fetch it again if we haven't already
-        cat_for_rename = cat if 'cat' in locals() and cat else db.query(Category).filter(Category.id == prompt.category_id).first()
-        
-        match = re.search(r'/upload/(?:v\d+/)?(ai_prompt_gallery/[^.]+)', prompt.image_url)
-        if match and cat_for_rename:
-            old_public_id = match.group(1)
+        cat_for_rename = cat if cat else db.query(Category).filter(Category.id == prompt.category_id).first()
+        if cat_for_rename and prompt.image_url:
             safe_cat_name = sanitize_for_filename(cat_for_rename.name, 20)
             short_prompt = sanitize_for_filename(prompt.prompt_text, 30)
-            new_public_id = f"ai_prompt_gallery/{safe_cat_name}/{safe_cat_name}_prompt_{prompt.id}_{short_prompt}"
+            new_s3_key = f"ai_prompt_gallery/{safe_cat_name}/{safe_cat_name}_prompt_{prompt.id}_{short_prompt}.webp"
             
             try:
-                rename_res = cloudinary.uploader.rename(old_public_id, new_public_id, overwrite=True)
-                # Update the display name on Cloudinary dashboard
-                try:
-                    cloudinary.uploader.explicit(new_public_id, type="upload", display_name=short_prompt)
-                except Exception as display_err:
-                    print(f"Failed to update display name on Cloudinary during update: {display_err}")
-                prompt.image_url = rename_res.get("secure_url")
-                db.commit()
+                updated_url = rename_or_move_s3_image(prompt.image_url, new_s3_key)
+                if updated_url != prompt.image_url:
+                    prompt.image_url = updated_url
+                    db.commit()
             except Exception as e:
-                print(f"Cloudinary rename failed during update: {e}")
+                print(f"S3 rename failed during update: {e}")
 
     db.refresh(prompt)
     return prompt

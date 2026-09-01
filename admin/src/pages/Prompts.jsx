@@ -138,7 +138,7 @@ export default function Prompts() {
     if (!file) return;
     setUploadingImage(true);
     setGlobalLoading(true);
-    setLoadingMessage('Uploading image to Cloudinary...');
+    setLoadingMessage('Uploading image to AWS S3...');
     setError('');
     
     const formData = new FormData();
@@ -153,7 +153,7 @@ export default function Prompts() {
       setImageUrl(response.data.image_url);
       setSuccess('Image uploaded successfully!');
     } catch (err) {
-      setError('Failed to upload image to Cloudinary.');
+      setError('Failed to upload image to S3.');
     } finally {
       setUploadingImage(false);
       setGlobalLoading(false);

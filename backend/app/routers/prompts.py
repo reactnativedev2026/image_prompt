@@ -4,6 +4,7 @@ from sqlalchemy import or_
 from app.database import get_db
 from app.models import Category, Prompt
 from app.schemas.models_schema import CategoryResponse, PromptResponse
+from app.services.s3 import normalize_image_url
 
 router = APIRouter(
     prefix="/api",
@@ -35,7 +36,13 @@ def get_prompts(
         
     # Apply offset and limit pagination
     offset = (page - 1) * limit
-    return query.offset(offset).limit(limit).all()
+    prompts = query.offset(offset).limit(limit).all()
+    
+    # Dynamically normalize image_url to CDN if configured
+    for p in prompts:
+        p.image_url = normalize_image_url(p.image_url)
+        
+    return prompts
 
 
 # ── Increment Prompt View Count (App view) ──

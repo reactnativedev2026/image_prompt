@@ -14,7 +14,10 @@ elif db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 engine = create_engine(
-    db_url, connect_args=connect_args
+    db_url,
+    connect_args=connect_args,
+    pool_pre_ping=True,
+    pool_recycle=300
 )
 
 # Session factory
