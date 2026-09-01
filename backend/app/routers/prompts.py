@@ -34,9 +34,9 @@ def get_prompts(
     if search:
         query = query.filter(Prompt.prompt_text.ilike(f"%{search}%"))
         
-    # Apply offset and limit pagination
+    # Apply latest first order, offset and limit pagination
     offset = (page - 1) * limit
-    prompts = query.offset(offset).limit(limit).all()
+    prompts = query.order_by(Prompt.id.desc()).offset(offset).limit(limit).all()
     
     # Dynamically normalize image_url to CDN if configured
     for p in prompts:

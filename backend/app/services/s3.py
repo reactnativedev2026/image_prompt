@@ -148,3 +148,18 @@ def rename_or_move_s3_image(old_url_or_key: str, new_key: str) -> str:
     except Exception as e:
         print(f"S3 move failed ({old_key} -> {new_key}): {e}")
         return old_url_or_key
+
+def delete_s3_image(url_or_key: str) -> bool:
+    """Deletes an image from S3 if it belongs to our bucket folder."""
+    if not url_or_key:
+        return False
+    key = extract_key_from_url(url_or_key)
+    if not key or not key.startswith("ai_prompt_gallery/"):
+        return False
+    try:
+        s3_client = get_s3_client()
+        s3_client.delete_object(Bucket=settings.AWS_S3_BUCKET_NAME, Key=key)
+        return True
+    except Exception as e:
+        print(f"Failed to delete S3 image ({key}): {e}")
+        return False

@@ -10,7 +10,7 @@ from app.schemas.models_schema import (
     PromptCreateRequest, PromptResponse, PromptUpdateRequest
 )
 from app.routers.auth_utils import hash_password, verify_password, create_access_token, get_current_admin
-from app.services.s3 import upload_image_to_s3, rename_or_move_s3_image
+from app.services.s3 import upload_image_to_s3, rename_or_move_s3_image, delete_s3_image
 
 router = APIRouter(
     prefix="/api/admin",
@@ -231,6 +231,10 @@ def delete_prompt(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Prompt not found"
         )
+    # Remove image from S3 if exists
+    if prompt.image_url:
+        delete_s3_image(prompt.image_url)
+        
     db.delete(prompt)
     db.commit()
     return {"message": "Prompt deleted successfully"}
