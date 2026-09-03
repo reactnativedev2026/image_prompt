@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://prompttrending.online',
+  baseURL: import.meta.env.VITE_API_URL || 'http://66.116.249.117',
   headers: {
     'Content-Type': 'application/json',
   },
