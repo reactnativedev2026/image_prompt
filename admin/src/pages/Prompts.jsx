@@ -33,7 +33,7 @@ import {
   ContentCopy as ContentCopyIcon,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
-import api from '../api';
+import api, { getErrorMessage } from '../api';
 
 export default function Prompts() {
   const [prompts, setPrompts] = useState([]);
@@ -57,7 +57,7 @@ export default function Prompts() {
   const [selectedPrompt, setSelectedPrompt] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [currentPromptId, setCurrentPromptId] = useState(null);
-  
+
   // Form fields
   const [promptText, setPromptText] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -140,7 +140,7 @@ export default function Prompts() {
     setGlobalLoading(true);
     setLoadingMessage('Uploading image to AWS S3...');
     setError('');
-    
+
     const formData = new FormData();
     formData.append('file', file);
 
@@ -153,7 +153,7 @@ export default function Prompts() {
       setImageUrl(response.data.image_url);
       setSuccess('Image uploaded successfully!');
     } catch (err) {
-      setError('Failed to upload image to S3.');
+      setError(getErrorMessage(err, 'Failed to upload image to S3.'));
     } finally {
       setUploadingImage(false);
       setGlobalLoading(false);
@@ -166,6 +166,10 @@ export default function Prompts() {
       setError('All fields including image are required.');
       return;
     }
+    if (promptText.trim().length < 5) {
+      setError('Prompt text must be at least 5 characters long.');
+      return;
+    }
     setError('');
     setSuccess('');
     setGlobalLoading(true);
@@ -173,7 +177,7 @@ export default function Prompts() {
 
     const payload = {
       image_url: imageUrl,
-      prompt_text: promptText,
+      prompt_text: promptText.trim(),
       category_id: parseInt(categoryId),
     };
 
@@ -188,7 +192,7 @@ export default function Prompts() {
       setOpenDialog(false);
       fetchPrompts();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save prompt.');
+      setError(getErrorMessage(err, 'Failed to save prompt.'));
     } finally {
       setGlobalLoading(false);
     }
@@ -206,7 +210,7 @@ export default function Prompts() {
       setSuccess('Prompt deleted successfully!');
       fetchPrompts();
     } catch (err) {
-      setError('Failed to delete prompt.');
+      setError(getErrorMessage(err, 'Failed to delete prompt.'));
     } finally {
       setGlobalLoading(false);
     }
@@ -295,10 +299,10 @@ export default function Prompts() {
         </Box>
       ) : (
         <>
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' }, 
-            gap: 3 
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
+            gap: 3
           }}>
             {prompts.length === 0 ? (
               <Box sx={{ gridColumn: '1 / -1', textAlign: 'center', py: 4 }}>

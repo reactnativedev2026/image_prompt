@@ -73,3 +73,14 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Backend / Python / SQLite / Env
+*.db
+*.sqlite3
+app.db
+.env
+backend/.env
+__pycache__/
+*.py[cod]
+venv/
+.venv/

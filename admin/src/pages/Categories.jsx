@@ -21,7 +21,7 @@ import {
   DialogActions
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
-import api from '../api';
+import api, { getErrorMessage } from '../api';
 
 export default function Categories() {
   const [categories, setCategories] = useState([]);
@@ -29,7 +29,7 @@ export default function Categories() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   // Dialog confirmation states
   const [openConfirm, setOpenConfirm] = useState(false);
   const [selectedCatId, setSelectedCatId] = useState(null);
@@ -57,12 +57,12 @@ export default function Categories() {
     setError('');
     setSuccess('');
     try {
-      const response = await api.post('/api/admin/categories', { name: newCategoryName });
+      const response = await api.post('/api/admin/categories', { name: newCategoryName.trim() });
       setCategories([...categories, response.data]);
       setNewCategoryName('');
       setSuccess('Category added successfully!');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to create category.');
+      setError(getErrorMessage(err, 'Failed to create category.'));
     }
   };
 
@@ -80,7 +80,7 @@ export default function Categories() {
       setCategories(categories.filter((cat) => cat.id !== selectedCatId));
       setSuccess('Category deleted successfully!');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to delete category.');
+      setError(getErrorMessage(err, 'Failed to delete category.'));
     }
   };
 
