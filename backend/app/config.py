@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
-    PROJECT_NAME: str = "AI Prompt Gallery Backend"
+    PROJECT_NAME: str = "Prompt Trending Backend"
     
     # Database Config - Loads Neon DB URL from env, falls back to SQLite
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")

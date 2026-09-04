@@ -51,7 +51,7 @@ export default function Dashboard() {
     <div>
       <Toolbar sx={{ justifyContent: 'center' }}>
         <Typography variant="h6" noWrap component="div" fontWeight="bold" color="primary">
-          KIDIip Admin
+          Prompt Trending
         </Typography>
       </Toolbar>
       <Divider />

@@ -9,7 +9,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="FastAPI Backend for managing AI image prompts with AWS S3 upload",
+    description="Prompt Trending Backend for managing AI image prompts with AWS S3 upload",
     version="1.0.0"
 )
 

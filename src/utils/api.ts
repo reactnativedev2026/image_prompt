@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const BASE_URL = 'http://66.116.249.117';
+export const BASE_URL = 'https://prompttrending.online';
 
 export const api = axios.create({
   baseURL: BASE_URL,
