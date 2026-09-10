@@ -35,7 +35,12 @@ jobs:
             npm install
             npm run build
             
-            echo "🔄 Reloading Nginx..."
+            echo "🚀 Deploying build to /var/www/html (Nginx web root)..."
+            mkdir -p /var/www/html
+            cp -r dist/* /var/www/html/
+            
+            echo "🔄 Restarting Backend & Reloading Nginx..."
+            sudo systemctl restart prompt-backend 2>/dev/null || sudo systemctl restart uvicorn 2>/dev/null || sudo pm2 restart all 2>/dev/null || true
             sudo systemctl reload nginx
             
             echo "✅ Deployment completed successfully!"
