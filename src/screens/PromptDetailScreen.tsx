@@ -17,6 +17,7 @@ import {
   TextInput,
   TouchableWithoutFeedback,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -69,7 +70,19 @@ const showCopiedToast = () => {
   }
 };
 
-const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any; navigation: any }) => {
+const ReelItem = ({
+  item,
+  insets,
+  navigation,
+  screenHeight,
+  screenWidth,
+}: {
+  item: PromptItem;
+  insets: any;
+  navigation: any;
+  screenHeight: number;
+  screenWidth: number;
+}) => {
   const { isFavorite, toggleFavorite } = useAppContext();
   const meta = getPromptDisplayMeta(item.id, item.category);
   const favored = isFavorite(item.id);
@@ -80,7 +93,6 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
     showCopiedToast();
   };
 
-
   const handleShare = async () => {
     try {
       await RNShare.share({ message: `✨ AI Prompt:\n\n${item.promptText}` });
@@ -89,40 +101,8 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
     }
   };
 
-  const handleGoToAI = () => {
-    Clipboard.setString(item.promptText);
-    if (Platform.OS === 'android') {
-      ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
-    }
-    Alert.alert(
-      "Use AI Generator",
-      "Select an AI tool to generate your image (prompt is copied to clipboard):",
-      [
-        {
-          text: "Leonardo AI",
-          onPress: () => Linking.openURL("https://leonardo.ai/")
-        },
-        {
-          text: "Bing Creator (DALL-E 3)",
-          onPress: () => Linking.openURL("https://www.bing.com/create")
-        },
-        {
-          text: "ChatGPT (DALL-E 3)",
-          onPress: () => Linking.openURL("https://chat.openai.com/")
-        },
-        {
-          text: "Cancel",
-          style: "cancel"
-        }
-      ]
-    );
-  };
-
-  // Adjust scrollable content height to accommodate header panel
-  const contentHeight = SCREEN_HEIGHT - insets.top - insets.bottom - 52;
-
   return (
-    <View style={[styles.reelItemContainer, { height: SCREEN_HEIGHT }]}>
+    <View style={[styles.reelItemContainer, { height: screenHeight, width: screenWidth }]}>
       {/* ── Custom Top Header Bar ── */}
       <View style={[styles.header, { marginTop: insets.top }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
@@ -137,15 +117,15 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
               color={favored ? '#A15DFB' : '#FFF'}
             />
           </TouchableOpacity>
-          {/* <TouchableOpacity style={styles.headerBtn}>
-            <Icon name="dots-vertical" size={24} color="#FFF" />
-          </TouchableOpacity> */}
         </View>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 16) + 40 }
+        ]}
         style={{ flex: 1 }}
       >
         {/* ── Main Hero Image Box ── */}
@@ -156,14 +136,6 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
 
         {/* ── Title ── */}
         <Text style={styles.titleText}>{meta.title}</Text>
-
-        {/* ── Categories/Tags ── */}
-        <View style={styles.tagsContainer}>
-          <View style={styles.tagPill}><Text style={styles.tagText}>{item.category}</Text></View>
-          <View style={styles.tagPill}><Text style={styles.tagText}>Digital Art</Text></View>
-          <View style={styles.tagPill}><Text style={styles.tagText}>Ultra Realistic</Text></View>
-          <View style={styles.tagPill}><Text style={styles.tagText}>8K</Text></View>
-        </View>
 
         {/* ── Prompt Section ── */}
         <View style={styles.sectionHeader}>
@@ -182,6 +154,8 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ── Prompt Box (Clickable for full screen) ── */}
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => setPromptModalVisible(true)}
@@ -258,7 +232,7 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
         </ScrollView>
       </ScrollView>
 
-      {/* ── Full Screen Prompt Modal ── */}
+      {/* ── Full Screen Prompt Modal (Safe Area Padded) ── */}
       <Modal
         visible={promptModalVisible}
         transparent={true}
@@ -266,14 +240,14 @@ const ReelItem = ({ item, insets, navigation }: { item: PromptItem; insets: any;
         onRequestClose={() => setPromptModalVisible(false)}
       >
         <View style={styles.promptModalOverlay}>
-          <View style={styles.promptModalContent}>
+          <View style={[styles.promptModalContent, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
             <View style={styles.promptModalHeader}>
               <Text style={styles.promptModalTitle}>📝 Full Prompt</Text>
               <TouchableOpacity onPress={() => setPromptModalVisible(false)} style={styles.promptModalCloseBtn}>
                 <Icon name="close" size={24} color="#FFF" />
               </TouchableOpacity>
             </View>
-            <ScrollView contentContainerStyle={styles.promptModalBody}>
+            <ScrollView contentContainerStyle={styles.promptModalBody} showsVerticalScrollIndicator={true}>
               <Text style={styles.promptModalText}>{item.promptText}</Text>
             </ScrollView>
             <TouchableOpacity
@@ -305,6 +279,7 @@ export const PromptDetailScreen = () => {
   const navigation = useNavigation<any>();
   const { item, promptsList = mockPrompts } = route.params as { item: PromptItem; promptsList?: PromptItem[] };
   const insets = useSafeAreaInsets();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
   const [showGuide, setShowGuide] = React.useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -354,8 +329,8 @@ export const PromptDetailScreen = () => {
         showsVerticalScrollIndicator={false}
         initialScrollIndex={safeInitialIndex}
         getItemLayout={(data, index) => ({
-          length: SCREEN_HEIGHT,
-          offset: SCREEN_HEIGHT * index,
+          length: windowHeight,
+          offset: windowHeight * index,
           index,
         })}
         renderItem={({ item: reelItem }) => (
@@ -363,12 +338,23 @@ export const PromptDetailScreen = () => {
             item={reelItem}
             insets={insets}
             navigation={navigation}
+            screenHeight={windowHeight}
+            screenWidth={windowWidth}
           />
         )}
       />
 
       {showGuide && (
-        <Animated.View style={[styles.guideOverlay, { opacity: fadeAnim, transform: [{ translateY: bounceAnim }] }]}>
+        <Animated.View
+          style={[
+            styles.guideOverlay,
+            {
+              bottom: Math.max(insets.bottom, 16) + 130,
+              opacity: fadeAnim,
+              transform: [{ translateY: bounceAnim }]
+            }
+          ]}
+        >
           <Icon name="chevron-double-up" size={30} color="#A15DFB" />
           <Text style={styles.guideText}>Swipe Up for Next</Text>
         </Animated.View>
@@ -620,10 +606,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#121222',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    height: '65%',
+    maxHeight: '80%',
+    minHeight: 320,
     borderWidth: 1,
     borderColor: '#1F1F35',
-    paddingBottom: 30,
   },
   promptModalHeader: {
     flexDirection: 'row',

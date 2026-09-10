@@ -36,11 +36,14 @@ export const fetchCategories = async (): Promise<ApiCategory[]> => {
 export const fetchPrompts = async (
   categoryId?: number,
   search?: string,
-  isTrending?: boolean
+  isTrending?: boolean,
+  page: number = 1,
+  limit: number = 21
 ): Promise<ApiPrompt[]> => {
   try {
     const params: any = {
-      limit: 100,
+      page,
+      limit,
     };
     if (categoryId) {
       params.category_id = categoryId;

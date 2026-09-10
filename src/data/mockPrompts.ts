@@ -4,6 +4,7 @@ export interface PromptItem {
   promptText: string;
   category: string;
   viewCount?: number;
+  isTrending?: boolean;
 }
 
 export const mockPrompts: PromptItem[] = [

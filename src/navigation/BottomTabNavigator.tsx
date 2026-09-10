@@ -7,6 +7,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
 
 import { GalleryScreen } from '../screens/GalleryScreen';
+import { TrendingScreen } from '../screens/TrendingScreen';
 import { ExploreScreen } from '../screens/ExploreScreen';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -15,6 +16,7 @@ const Tab = createBottomTabNavigator();
 
 const TABS = [
   { name: 'Gallery', label: 'Home', icon: 'home', iconOff: 'home-outline' },
+  { name: 'Trending', label: 'Trending', icon: 'fire', iconOff: 'fire' },
   { name: 'Explore', label: 'Explore', icon: 'magnify', iconOff: 'magnify' },
   { name: 'Favorites', label: 'Favorites', icon: 'heart', iconOff: 'heart-outline' },
   { name: 'Settings', label: 'Profile', icon: 'account', iconOff: 'account-outline' },
@@ -30,10 +32,11 @@ const BottomTabNavigator = () => {
         tabBarIcon: ({ focused, size }) => {
           const tab = TABS.find(t => t.name === route.name)!;
           const iconName = focused ? tab.icon : tab.iconOff;
+          const activeColor = route.name === 'Trending' ? '#FF6B00' : colors.primary;
 
           return (
             <View style={styles.iconWrap}>
-              <Icon name={iconName} size={24} color={focused ? colors.primary : '#64748B'} />
+              <Icon name={iconName} size={24} color={focused ? activeColor : '#64748B'} />
             </View>
           );
         },
@@ -41,8 +44,9 @@ const BottomTabNavigator = () => {
         // ── Tab label ─────────────────────────────────────────────
         tabBarLabel: ({ focused }) => {
           const tab = TABS.find(t => t.name === route.name)!;
+          const activeColor = route.name === 'Trending' ? '#FF6B00' : colors.primary;
           return (
-            <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
+            <Text style={[styles.tabLabel, focused && [styles.tabLabelActive, { color: activeColor }]]}>
               {tab.label}
             </Text>
           );
@@ -65,6 +69,7 @@ const BottomTabNavigator = () => {
       })}
     >
       <Tab.Screen name="Gallery" component={GalleryScreen} />
+      <Tab.Screen name="Trending" component={TrendingScreen} />
       <Tab.Screen name="Explore" component={ExploreScreen} />
       <Tab.Screen name="Favorites" component={FavoritesScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />

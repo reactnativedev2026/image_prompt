@@ -38,7 +38,7 @@ def get_prompts(
     if search:
         query = query.filter(Prompt.prompt_text.ilike(f"%{search}%"))
         
-    # Apply latest first order, offset and limit pagination
+    # Apply order: latest first (simple regular order), offset and limit pagination
     offset = (page - 1) * limit
     prompts = query.order_by(Prompt.id.desc()).offset(offset).limit(limit).all()
     

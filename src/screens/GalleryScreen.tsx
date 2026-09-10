@@ -99,16 +99,16 @@ const AnimatedCard = ({ item, index, navigation, toggleFavorite, isFavorite, pro
         style={styles.cardInner}
       >
         <Image source={{ uri: item.imageUrl }} style={styles.image} />
-        {/* Top-Right Image Icon */}
-        <View style={styles.imageIconBadge}>
-          <Icon name="image" size={12} color="#FFF" />
+        {/* Top-Right Badge: Fire for trending, Image icon for regular */}
+        <View style={[styles.imageIconBadge, item.isTrending && { backgroundColor: 'rgba(255, 61, 0, 0.9)' }]}>
+          <Icon name={item.isTrending ? 'fire' : 'image'} size={12} color="#FFF" />
         </View>
 
         {/* Info overlayed on bottom of image */}
         <View style={styles.cardInfoOverlay}>
-          <Text style={styles.cardTitle} numberOfLines={1}>
+          {/* <Text style={styles.cardTitle} numberOfLines={1}>
             {meta.title}
-          </Text>
+          </Text> */}
           <View style={styles.cardFooter}>
             <View style={styles.ratingWrap}>
               <Icon name="star" size={10} color="#FFB300" />
@@ -138,10 +138,16 @@ export const GalleryScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const [prompts, setPrompts] = useState<PromptItem[]>([]);
-  const [categories, setCategories] = useState<string[]>(['All']);
+  const [categories, setCategories] = useState<string[]>(['All', 'Trending']);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dbCategories, setDbCategories] = useState<ApiCategory[]>([]);
+
+  // ── Pagination State (20 items per page) ──
+  const PAGE_LIMIT = 20;
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Scroll to Top ref and state
   const flatListRef = useRef<FlatList>(null);
@@ -163,67 +169,132 @@ export const GalleryScreen = () => {
     });
   };
 
-  const loadData = async (showLoadingIndicator = true) => {
-    if (showLoadingIndicator) setLoading(true);
-    try {
-      const [cats, pts] = await Promise.all([
-        fetchCategories(),
-        fetchPrompts()
-      ]);
-      setDbCategories(cats);
+  const loadData = async (pageNum = 1, isRefresh = false) => {
+    if (pageNum === 1) {
+      if (!isRefresh) setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
 
-      // Merge dynamic categories
-      const categoryNames = ['All', ...cats.map(c => c.name)];
-      setCategories(categoryNames);
+    try {
+      let catId: number | undefined = undefined;
+      let isTrendingFilter: boolean | undefined = undefined;
+
+      if (selectedCategory === 'Trending') {
+        isTrendingFilter = true;
+      } else if (selectedCategory !== 'All') {
+        const found = dbCategories.find(c => c.name.toLowerCase() === selectedCategory.toLowerCase());
+        if (found) catId = found.id;
+      }
+
+      const [cats, pts] = await Promise.all([
+        dbCategories.length === 0 ? fetchCategories() : Promise.resolve(dbCategories),
+        fetchPrompts(catId, searchQuery.trim() || undefined, isTrendingFilter, pageNum, PAGE_LIMIT)
+      ]);
+
+      if (dbCategories.length === 0 && cats && cats.length > 0) {
+        setDbCategories(cats);
+        const categoryNames = ['All', 'Trending', ...cats.map(c => c.name)];
+        setCategories(categoryNames);
+      }
+
+      const currentCats = dbCategories.length > 0 ? dbCategories : cats;
 
       if (pts && pts.length > 0) {
-        const mappedPrompts = pts.map(p => {
-          const catObj = cats.find(c => c.id === p.category_id);
+        const mappedPrompts: PromptItem[] = pts.map(p => {
+          const catObj = currentCats.find(c => c.id === p.category_id);
           return {
             id: String(p.id),
             imageUrl: p.image_url,
             promptText: p.prompt_text,
             category: catObj ? catObj.name : 'Other',
-            viewCount: p.view_count || 0
+            viewCount: p.view_count || 0,
+            isTrending: Boolean(p.is_trending)
           };
         });
-        setPrompts(mappedPrompts);
+
+        if (pageNum === 1) {
+          setPrompts(mappedPrompts);
+        } else {
+          setPrompts(prev => {
+            const existingIds = new Set(prev.map(item => item.id));
+            const fresh = mappedPrompts.filter(item => !existingIds.has(item.id));
+            return [...prev, ...fresh];
+          });
+        }
+
+        setHasMore(pts.length === PAGE_LIMIT);
+        setPage(pageNum);
       } else {
-        // Fallback to mockPrompts if backend is empty
-        const mappedMock = mockPrompts.map(p => ({
-          ...p,
-          viewCount: p.viewCount || Math.floor(Math.random() * 1000) + 100
-        }));
-        setPrompts(mappedMock);
+        if (pageNum === 1) {
+          if (selectedCategory === 'All' && !searchQuery.trim()) {
+            const mappedMock = mockPrompts.map((p, idx) => ({
+              ...p,
+              viewCount: p.viewCount || Math.floor(Math.random() * 1000) + 100,
+              isTrending: idx < 6
+            }));
+            setPrompts(mappedMock.slice(0, PAGE_LIMIT));
+            setHasMore(mappedMock.length > PAGE_LIMIT);
+          } else {
+            setPrompts([]);
+            setHasMore(false);
+          }
+        } else {
+          setHasMore(false);
+        }
       }
     } catch (e) {
       console.error('Error fetching dynamic prompts/categories:', e);
-      // Fallback to mock data on error
-      const mappedMock = mockPrompts.map(p => ({
-        ...p,
-        viewCount: p.viewCount || Math.floor(Math.random() * 1000) + 100
-      }));
-      setPrompts(mappedMock);
+      if (pageNum === 1) {
+        const mappedMock = mockPrompts.map((p, idx) => ({
+          ...p,
+          viewCount: p.viewCount || Math.floor(Math.random() * 1000) + 100,
+          isTrending: idx < 6
+        }));
+        setPrompts(mappedMock.slice(0, PAGE_LIMIT));
+      }
+      setHasMore(false);
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    setPage(1);
+    setHasMore(true);
+    loadData(1, false);
+  }, [selectedCategory, searchQuery]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadData(false);
+    setPage(1);
+    setHasMore(true);
+    loadData(1, true);
+  };
+
+  const handleLoadMore = () => {
+    if (!loading && !loadingMore && hasMore) {
+      loadData(page + 1, false);
+    }
   };
 
   const filteredPrompts = prompts.filter(item => {
     const matchesSearch =
+      !searchQuery.trim() ||
       item.promptText.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || item.category.toLowerCase() === selectedCategory.toLowerCase();
+
+    let matchesCategory = false;
+    if (selectedCategory === 'All') {
+      matchesCategory = true;
+    } else if (selectedCategory === 'Trending') {
+      matchesCategory = Boolean(item.isTrending);
+    } else {
+      matchesCategory = item.category.toLowerCase() === selectedCategory.toLowerCase();
+    }
+
     return matchesSearch && matchesCategory;
   });
 
@@ -234,6 +305,7 @@ export const GalleryScreen = () => {
     if (sortBy === 'alphabetical') {
       return [...filteredPrompts].sort((a, b) => a.promptText.localeCompare(b.promptText));
     }
+    // Simple regular order (no forced trending on top)
     return filteredPrompts;
   }, [filteredPrompts, sortBy]);
 
@@ -297,6 +369,8 @@ export const GalleryScreen = () => {
           contentContainerStyle={styles.pillRow}
           renderItem={({ item }) => {
             const active = selectedCategory === item;
+            const isTrendingItem = item === 'Trending';
+            const label = isTrendingItem ? '🔥 Trending' : item;
             if (active) {
               return (
                 <TouchableOpacity
@@ -304,12 +378,12 @@ export const GalleryScreen = () => {
                   onPress={() => setSelectedCategory(item)}
                 >
                   <LinearGradient
-                    colors={colors.primaryGradient}
+                    colors={isTrendingItem ? ['#FF6B00', '#FF3D00'] : colors.primaryGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.pillActiveGradient}
                   >
-                    <Text style={styles.pillTextActive}>{item}</Text>
+                    <Text style={styles.pillTextActive}>{label}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               );
@@ -317,10 +391,10 @@ export const GalleryScreen = () => {
             return (
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={styles.pill}
+                style={[styles.pill, isTrendingItem && { borderColor: '#FF6B0055', backgroundColor: '#FF6B0015' }]}
                 onPress={() => setSelectedCategory(item)}
               >
-                <Text style={styles.pillText}>{item}</Text>
+                <Text style={[styles.pillText, isTrendingItem && { color: '#FF8A00', fontWeight: '700' }]}>{label}</Text>
               </TouchableOpacity>
             );
           }}
@@ -368,6 +442,15 @@ export const GalleryScreen = () => {
               tintColor="#8A2BE2"
               colors={['#8A2BE2']}
             />
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#8A2BE2" />
+              </View>
+            ) : null
           }
           ListEmptyComponent={
             <View style={styles.emptyBox}>

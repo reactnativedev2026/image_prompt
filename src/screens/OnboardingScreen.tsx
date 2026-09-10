@@ -38,20 +38,19 @@ export const OnboardingScreen = () => {
         useNativeDriver: true,
       }),
       // Text fade & slide
-      Animated.delay(500).start(() => {
-        Animated.parallel([
-          Animated.timing(textOpacity, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(textTranslateY, {
-            toValue: 0,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }),
+      Animated.delay(500),
+      Animated.parallel([
+        Animated.timing(textOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(textTranslateY, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
       // Loading Progress bar animation (animates over 3 seconds)
       Animated.timing(progressWidth, {
         toValue: 1,
