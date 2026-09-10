@@ -49,6 +49,25 @@ def get_prompts(
     return prompts
 
 
+# ── Fetch Trending Prompts Directly (App view dedicated endpoint) ──
+@router.get("/prompts/trending", response_model=list[PromptResponse])
+def get_trending_prompts(
+    category_id: int | None = Query(None, description="Filter trending prompts by Category ID"),
+    page: int = Query(1, ge=1, description="Page number for pagination"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Prompt).filter(Prompt.is_trending == True)
+    if category_id is not None:
+        query = query.filter(Prompt.category_id == category_id)
+
+    offset = (page - 1) * limit
+    prompts = query.order_by(Prompt.id.desc()).offset(offset).limit(limit).all()
+    for p in prompts:
+        p.image_url = normalize_image_url(p.image_url)
+    return prompts
+
+
 # ── Increment Prompt View Count (App view) ──
 @router.post("/prompts/{id}/view", status_code=status.HTTP_200_OK)
 def increment_prompt_view(id: int, db: Session = Depends(get_db)):

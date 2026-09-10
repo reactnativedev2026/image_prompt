@@ -1,4 +1,4 @@
-name: Deploy Admin Panel to Server
+name: Deploy Admin Panel
 
 on:
   push:
@@ -6,16 +6,16 @@ on:
       - main
     paths:
       - 'admin/**'
-      - '.github/workflows/deploy.yml'
+      - '.github/workflows/deploy-admin.yml'
   workflow_dispatch:
 
 jobs:
   deploy-admin:
-    name: Pull & Build on Server
+    name: Build & Deploy Admin Dashboard
     runs-on: ubuntu-latest
 
     steps:
-      - name: Execute SSH commands to update and build on Server
+      - name: Execute SSH commands to build and deploy Admin
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -27,7 +27,7 @@ jobs:
             echo "🚀 Navigating to project folder..."
             cd /var/www/prompt-backend
             
-            echo "📥 Pulling latest code from git..."
+            echo "📥 Pulling latest code..."
             git pull origin main
             
             echo "📦 Building Admin Panel..."
@@ -39,8 +39,7 @@ jobs:
             mkdir -p /var/www/html
             cp -r dist/* /var/www/html/
             
-            echo "🔄 Restarting Backend & Reloading Nginx..."
-            sudo systemctl restart prompt-backend 2>/dev/null || sudo systemctl restart uvicorn 2>/dev/null || sudo pm2 restart all 2>/dev/null || true
+            echo "🔄 Reloading Nginx..."
             sudo systemctl reload nginx
             
-            echo "✅ Deployment completed successfully!"
+            echo "✅ Admin Panel deployed successfully!"
