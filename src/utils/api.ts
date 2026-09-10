@@ -15,6 +15,7 @@ export interface ApiPrompt {
   prompt_text: string;
   view_count: number;
   category_id: number;
+  is_trending?: boolean;
 }
 
 export interface ApiCategory {
@@ -32,7 +33,11 @@ export const fetchCategories = async (): Promise<ApiCategory[]> => {
   }
 };
 
-export const fetchPrompts = async (categoryId?: number, search?: string): Promise<ApiPrompt[]> => {
+export const fetchPrompts = async (
+  categoryId?: number,
+  search?: string,
+  isTrending?: boolean
+): Promise<ApiPrompt[]> => {
   try {
     const params: any = {
       limit: 100,
@@ -42,6 +47,9 @@ export const fetchPrompts = async (categoryId?: number, search?: string): Promis
     }
     if (search) {
       params.search = search;
+    }
+    if (typeof isTrending === 'boolean') {
+      params.is_trending = isTrending;
     }
     const response = await api.get('/api/prompts', { params });
     return response.data;

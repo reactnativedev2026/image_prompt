@@ -21,6 +21,7 @@ def get_categories(db: Session = Depends(get_db)):
 @router.get("/prompts", response_model=list[PromptResponse])
 def get_prompts(
     category_id: int | None = Query(None, description="Filter prompts by Category ID"),
+    is_trending: bool | None = Query(None, description="Filter prompts by trending status"),
     search: str | None = Query(None, description="Search prompts by prompt text"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
@@ -30,6 +31,9 @@ def get_prompts(
     
     if category_id is not None:
         query = query.filter(Prompt.category_id == category_id)
+
+    if is_trending is not None:
+        query = query.filter(Prompt.is_trending == is_trending)
         
     if search:
         query = query.filter(Prompt.prompt_text.ilike(f"%{search}%"))

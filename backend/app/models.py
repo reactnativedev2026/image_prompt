@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
@@ -29,6 +29,7 @@ class Prompt(Base):
     id = Column(Integer, primary_key=True, index=True)
     image_url = Column(String, nullable=False)
     prompt_text = Column(String, nullable=False)
+    is_trending = Column(Boolean, default=False, nullable=False)
     view_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     

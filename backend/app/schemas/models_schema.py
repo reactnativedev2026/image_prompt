@@ -26,11 +26,13 @@ class PromptCreateRequest(BaseModel):
     image_url: str
     prompt_text: str = Field(..., min_length=5)
     category_id: int
+    is_trending: bool = False
 
 class PromptUpdateRequest(BaseModel):
     image_url: str | None = None
     prompt_text: str | None = None
     category_id: int | None = None
+    is_trending: bool | None = None
 
 class PromptResponse(BaseModel):
     id: int
@@ -38,6 +40,7 @@ class PromptResponse(BaseModel):
     prompt_text: str
     view_count: int
     category_id: int
+    is_trending: bool = False
 
     class Config:
         from_attributes = True

@@ -23,7 +23,10 @@ import {
   Backdrop,
   CardActionArea,
   Tooltip,
-  Snackbar
+  Snackbar,
+  Switch,
+  FormControlLabel,
+  Chip
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -31,7 +34,8 @@ import {
   Search as SearchIcon,
   CloudUpload as CloudUploadIcon,
   ContentCopy as ContentCopyIcon,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
+  Whatshot as TrendingIcon
 } from '@mui/icons-material';
 import api, { getErrorMessage } from '../api';
 
@@ -47,6 +51,7 @@ export default function Prompts() {
   // Filtering states
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [filterTrending, setFilterTrending] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const limit = 12;
@@ -62,6 +67,7 @@ export default function Prompts() {
   const [promptText, setPromptText] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [isTrending, setIsTrending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   // Snackbar states
@@ -74,7 +80,7 @@ export default function Prompts() {
 
   useEffect(() => {
     fetchPrompts();
-  }, [page, selectedCategory, search]);
+  }, [page, selectedCategory, search, filterTrending]);
 
   const fetchCategories = async () => {
     try {
@@ -93,7 +99,8 @@ export default function Prompts() {
         page,
         limit,
         search: search || undefined,
-        category_id: selectedCategory || undefined
+        category_id: selectedCategory || undefined,
+        is_trending: filterTrending !== '' ? (filterTrending === 'true') : undefined
       };
       const response = await api.get('/api/prompts', { params });
       setPrompts(response.data);
@@ -114,6 +121,7 @@ export default function Prompts() {
     setPromptText('');
     setCategoryId('');
     setImageUrl('');
+    setIsTrending(false);
     setCurrentPromptId(null);
     setOpenDialog(true);
   };
@@ -124,6 +132,7 @@ export default function Prompts() {
     setPromptText(prompt.prompt_text);
     setCategoryId(prompt.category_id);
     setImageUrl(prompt.image_url);
+    setIsTrending(Boolean(prompt.is_trending));
     setCurrentPromptId(prompt.id);
     setOpenDialog(true);
   };
@@ -179,6 +188,7 @@ export default function Prompts() {
       image_url: imageUrl,
       prompt_text: promptText.trim(),
       category_id: parseInt(categoryId),
+      is_trending: isTrending,
     };
 
     try {
@@ -195,6 +205,24 @@ export default function Prompts() {
       setError(getErrorMessage(err, 'Failed to save prompt.'));
     } finally {
       setGlobalLoading(false);
+    }
+  };
+
+  const handleToggleTrending = async (prompt, e) => {
+    e.stopPropagation();
+    try {
+      const response = await api.patch(`/api/admin/prompts/${prompt.id}/toggle-trending`);
+      setPrompts((prev) =>
+        prev.map((p) => (p.id === prompt.id ? { ...p, is_trending: response.data.is_trending } : p))
+      );
+      setSnackbarMessage(
+        response.data.is_trending
+          ? 'Prompt marked as Trending! 🔥'
+          : 'Prompt removed from Trending.'
+      );
+      setSnackbarOpen(true);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to update trending status.'));
     }
   };
 
@@ -289,6 +317,24 @@ export default function Prompts() {
               ))}
             </TextField>
           </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <TextField
+              select
+              label="Filter by Trending"
+              variant="outlined"
+              size="small"
+              fullWidth
+              value={filterTrending}
+              onChange={(e) => {
+                setFilterTrending(e.target.value);
+                setPage(1);
+              }}
+            >
+              <MenuItem value="">All Statuses</MenuItem>
+              <MenuItem value="true">🔥 Trending Only</MenuItem>
+              <MenuItem value="false">Regular Only</MenuItem>
+            </TextField>
+          </Grid>
         </Grid>
       </Paper>
 
@@ -314,13 +360,33 @@ export default function Prompts() {
               prompts.map((prompt) => (
                 <Card key={prompt.id} sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-4px)' } }}>
                   <CardActionArea onClick={() => handleOpenDetail(prompt)} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                    <CardMedia
-                      component="img"
-                      height="200"
-                      image={prompt.image_url}
-                      alt={prompt.prompt_text}
-                      sx={{ objectFit: 'cover', width: '100%' }}
-                    />
+                    <Box sx={{ position: 'relative', width: '100%' }}>
+                      <CardMedia
+                        component="img"
+                        height="200"
+                        image={prompt.image_url}
+                        alt={prompt.prompt_text}
+                        sx={{ objectFit: 'cover', width: '100%' }}
+                      />
+                      {prompt.is_trending && (
+                        <Chip
+                          icon={<TrendingIcon sx={{ fontSize: '15px !important', color: '#ff5722 !important' }} />}
+                          label="Trending"
+                          size="small"
+                          sx={{
+                            position: 'absolute',
+                            top: 10,
+                            right: 10,
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            fontWeight: 'bold',
+                            color: '#ff5722',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                            zIndex: 2,
+                            '& .MuiChip-label': { px: 1 }
+                          }}
+                        />
+                      )}
+                    </Box>
                     <CardContent sx={{ flexGrow: 1, width: '100%', boxSizing: 'border-box' }}>
                       <Typography variant="caption" color="primary" fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }} gutterBottom>
                         {categories.find((c) => c.id === prompt.category_id)?.name || 'Uncategorized'}
@@ -342,6 +408,15 @@ export default function Prompts() {
                       Views: {prompt.view_count || 0}
                     </Typography>
                     <Box>
+                      <Tooltip title={prompt.is_trending ? "Remove from Trending" : "Mark as Trending"}>
+                        <IconButton
+                          size="small"
+                          color={prompt.is_trending ? "warning" : "default"}
+                          onClick={(e) => handleToggleTrending(prompt, e)}
+                        >
+                          <TrendingIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Copy Prompt">
                         <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCopyPrompt(prompt.prompt_text); }}>
                           <ContentCopyIcon fontSize="small" />
@@ -387,13 +462,26 @@ export default function Prompts() {
                   <Box component="img" src={selectedPrompt.image_url} alt="Prompt visual" sx={{ width: '100%', height: '100%', maxHeight: 400, objectFit: 'cover' }} />
                 </Grid>
                 <Grid item xs={12} md={6} sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Box>
-                    <Typography variant="caption" color="primary" fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-                      Category
-                    </Typography>
-                    <Typography variant="h6" fontWeight="medium">
-                      {categories.find((c) => c.id === selectedPrompt.category_id)?.name || 'Uncategorized'}
-                    </Typography>
+                  <Box display="flex" alignItems="center" justifyContent="space-between">
+                    <Box>
+                      <Typography variant="caption" color="primary" fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Category
+                      </Typography>
+                      <Typography variant="h6" fontWeight="medium">
+                        {categories.find((c) => c.id === selectedPrompt.category_id)?.name || 'Uncategorized'}
+                      </Typography>
+                    </Box>
+                    {selectedPrompt.is_trending ? (
+                      <Chip
+                        icon={<TrendingIcon sx={{ color: '#ff5722 !important' }} />}
+                        label="Trending"
+                        color="warning"
+                        size="small"
+                        sx={{ fontWeight: 'bold' }}
+                      />
+                    ) : (
+                      <Chip label="Regular" size="small" variant="outlined" />
+                    )}
                   </Box>
                   <Box sx={{ flexGrow: 1 }}>
                     <Typography variant="caption" color="text.secondary" fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
@@ -429,9 +517,9 @@ export default function Prompts() {
         <form onSubmit={handleSavePrompt}>
           <DialogContent dividers>
             <Grid container spacing={3}>
-              {/* Left Column: Text Inputs */}
+              {/* Left Column: Text Inputs & Trending Toggle */}
               <Grid item xs={12} md={6}>
-                <Box display="flex" flexDirection="column" gap={3}>
+                <Box display="flex" flexDirection="column" gap={2.5}>
                   <TextField
                     select
                     label="Category"
@@ -454,10 +542,47 @@ export default function Prompts() {
                     fullWidth
                     required
                     multiline
-                    rows={8}
+                    rows={6}
                     value={promptText}
                     onChange={(e) => setPromptText(e.target.value)}
                   />
+
+                  {/* Trending Option Toggle */}
+                  <Box
+                    sx={{
+                      p: 1.8,
+                      border: '1px solid',
+                      borderColor: isTrending ? '#ffb74d' : '#e2e8f0',
+                      borderRadius: 2,
+                      backgroundColor: isTrending ? 'rgba(255, 152, 0, 0.08)' : '#fafafa',
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                  >
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={isTrending}
+                          onChange={(e) => setIsTrending(e.target.checked)}
+                          color="warning"
+                        />
+                      }
+                      label={
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <TrendingIcon color={isTrending ? "warning" : "action"} />
+                          <Box>
+                            <Typography variant="subtitle2" fontWeight="bold">
+                              Trending Prompt
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {isTrending
+                                ? 'Marked as Trending in app'
+                                : 'Enable to mark as Trending in app'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      }
+                    />
+                  </Box>
                 </Box>
               </Grid>
 

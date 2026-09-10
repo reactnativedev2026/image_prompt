@@ -142,7 +142,8 @@ def create_prompt(
     new_prompt = Prompt(
         image_url=payload.image_url,
         prompt_text=payload.prompt_text,
-        category_id=payload.category_id
+        category_id=payload.category_id,
+        is_trending=payload.is_trending
     )
     db.add(new_prompt)
     db.commit()
@@ -197,6 +198,9 @@ def update_prompt(
     if payload.prompt_text is not None:
         prompt.prompt_text = payload.prompt_text
 
+    if payload.is_trending is not None:
+        prompt.is_trending = payload.is_trending
+
     db.commit()
     
     # If a new image was uploaded, organize it on S3
@@ -215,6 +219,24 @@ def update_prompt(
             except Exception as e:
                 print(f"S3 rename failed during update: {e}")
 
+    db.refresh(prompt)
+    return prompt
+
+
+@router.patch("/prompts/{id}/toggle-trending", response_model=PromptResponse)
+def toggle_prompt_trending(
+    id: int,
+    db: Session = Depends(get_db),
+    current_admin: str = Depends(get_current_admin)
+):
+    prompt = db.query(Prompt).filter(Prompt.id == id).first()
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prompt not found"
+        )
+    prompt.is_trending = not prompt.is_trending
+    db.commit()
     db.refresh(prompt)
     return prompt
 
