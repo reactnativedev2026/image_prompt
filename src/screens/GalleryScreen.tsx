@@ -321,7 +321,7 @@ export const GalleryScreen = () => {
 
         <View style={styles.titleWrapper}>
           <Text style={styles.headerTitleMain}>
-            AI Prompt <Text style={styles.headerTitlePurple}>Generator</Text>
+            Pro Prompt <Text style={styles.headerTitlePurple}>Generator</Text>
           </Text>
         </View>
 

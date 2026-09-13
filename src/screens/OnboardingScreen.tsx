@@ -1,8 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../theme/colors';
 import { fetchCategories, fetchPrompts } from '../utils/api';
 
@@ -59,7 +58,7 @@ export const OnboardingScreen = () => {
       })
     ]).start();
 
-    // 3. Navigation redirect after 3 seconds
+    // 3. Navigation redirect after 3.2 seconds
     const timer = setTimeout(() => {
       navigation.replace('Main');
     }, 3200);
@@ -69,11 +68,11 @@ export const OnboardingScreen = () => {
 
   return (
     <LinearGradient
-      colors={['#0C0C14', '#17172C', '#0C0C14']}
+      colors={['#090912', '#14142B', '#090912']}
       style={styles.container}
     >
       <View style={styles.content}>
-        {/* Animated logo badge */}
+        {/* Animated logo badge with appIcon */}
         <Animated.View
           style={[
             styles.logoContainer,
@@ -83,12 +82,11 @@ export const OnboardingScreen = () => {
             },
           ]}
         >
-          <LinearGradient
-            colors={colors.primaryGradient}
-            style={styles.logoGradient}
-          >
-            <Icon name="creation" size={54} color="#FFF" />
-          </LinearGradient>
+          <Image
+            source={require('../assets/appIcon.png')}
+            style={styles.logoImage}
+            resizeMode="cover"
+          />
         </Animated.View>
 
         {/* Animated text labels */}
@@ -99,8 +97,8 @@ export const OnboardingScreen = () => {
             alignItems: 'center',
           }}
         >
-          <Text style={styles.title}>AI Prompt Generator</Text>
-          <Text style={styles.subtitle}>Unlock Your Creative Potential</Text>
+          <Text style={styles.title}>Pro Prompt</Text>
+          <Text style={styles.subtitle}>AI Image Prompt Generator</Text>
         </Animated.View>
 
         {/* Dynamic Loading Progress Bar */}
@@ -141,22 +139,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   logoContainer: {
-    width: 110,
-    height: 110,
-    borderRadius: 36,
+    width: 130,
+    height: 130,
+    borderRadius: 32,
     overflow: 'hidden',
     marginBottom: 24,
-    elevation: 8,
-    shadowColor: '#A15DFB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
+    elevation: 12,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    backgroundColor: '#0F1020',
   },
-  logoGradient: {
+  logoImage: {
     width: '100%',
     height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 32,
   },
   title: {
     fontSize: 26,

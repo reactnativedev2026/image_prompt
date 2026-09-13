@@ -36,7 +36,7 @@ export const SettingsScreen = () => {
   const handleShareApp = async () => {
     try {
       await RNShare.share({
-        message: '✨ AI Prompt Generator - Create stunning AI images with these curated prompts!\nDownload now and start generating!',
+        message: '✨ Pro Prompt - Create stunning AI images with these curated prompts!\nDownload now and start generating!',
       });
     } catch (e: any) {
       console.error(e.message);
@@ -56,8 +56,8 @@ export const SettingsScreen = () => {
           >
             <Icon name="account" size={48} color="#FFF" />
           </LinearGradient>
-          <Text style={styles.profileName}>AI Prompt Creator</Text>
-          <Text style={styles.profileEmail}>explorer@imageprompt.com</Text>
+          <Text style={styles.profileName}>Pro Prompt Creator</Text>
+          <Text style={styles.profileEmail}>explorer@proprompt.com</Text>
         </View>
 
         {/* ── Commented Default Redirect Tool Feature ── */}
@@ -150,7 +150,7 @@ export const SettingsScreen = () => {
           <Text style={styles.sectionLabel}>ABOUT</Text>
           <View style={styles.aboutCard}>
             <Icon name="image-multiple-outline" size={32} color={colors.primary} />
-            <Text style={styles.aboutAppName}>AI Prompt Generator</Text>
+            <Text style={styles.aboutAppName}>Pro Prompt</Text>
             <Text style={styles.aboutVersion}>Version 1.0.0</Text>
             <Text style={styles.aboutTagline}>Curated prompts for creative minds.</Text>
           </View>
@@ -175,7 +175,7 @@ export const SettingsScreen = () => {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBody}>
               <Text style={styles.policyHeading}>1. Introduction</Text>
               <Text style={styles.policyParagraph}>
-                Welcome to AI Prompt Generator. We value your privacy and are committed to protecting your personal data. This privacy policy explains how we collect, use, and protect your information.
+                Welcome to Pro Prompt. We value your privacy and are committed to protecting your personal data. This privacy policy explains how we collect, use, and protect your information.
               </Text>
 
               <Text style={styles.policyHeading}>2. Data Collection</Text>
@@ -249,7 +249,7 @@ export const SettingsScreen = () => {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBody}>
               <Text style={styles.policyHeading}>1. Acceptance of Terms</Text>
               <Text style={styles.policyParagraph}>
-                By accessing or using AI Prompt Generator, you agree to comply with and be bound by these Terms and Conditions.
+                By accessing or using Pro Prompt, you agree to comply with and be bound by these Terms and Conditions.
               </Text>
 
               <Text style={styles.policyHeading}>2. Prompt Usage License</Text>

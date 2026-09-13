@@ -9,7 +9,7 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   Modal,
-  SafeAreaView
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -21,6 +21,7 @@ const DRAWER_WIDTH = width * 0.78;
 
 // Create a helper ref that we can export and link to our NavigationContainer
 import { createNavigationContainerRef } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 export const globalNavigationRef = createNavigationContainerRef<any>();
 
 export const CustomDrawer = () => {
@@ -100,11 +101,15 @@ export const CustomDrawer = () => {
           >
             {/* Header */}
             <View style={styles.header}>
-              <LinearGradient colors={colors.primaryGradient} style={styles.logoBadge}>
-                <Icon name="creation" size={32} color="#FFF" />
-              </LinearGradient>
-              <Text style={styles.appTitle}>AI Prompt</Text>
-              <Text style={styles.appSubtitle}>Generator</Text>
+              <View style={styles.logoBadge}>
+                <Image
+                  source={require('../assets/appIcon.png')}
+                  style={{ width: '100%', height: '100%', borderRadius: 20 }}
+                  resizeMode="cover"
+                />
+              </View>
+              <Text style={styles.appTitle}>Pro Prompt</Text>
+              <Text style={styles.appSubtitle}>AI Image Prompt Generator</Text>
             </View>
 
             {/* Menu Divider */}
@@ -200,7 +205,7 @@ export const CustomDrawer = () => {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBody}>
               <Text style={styles.policyHeading}>1. Acceptance of Terms</Text>
               <Text style={styles.policyParagraph}>
-                By accessing or using AI Prompt Generator, you agree to comply with and be bound by these Terms and Conditions.
+                By accessing or using Pro Prompt, you agree to comply with and be bound by these Terms and Conditions.
               </Text>
 
               <Text style={styles.policyHeading}>2. Prompt Usage License</Text>
