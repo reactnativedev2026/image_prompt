@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking, Platform }
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../theme/colors';
+import { logScreenView } from '../utils/analytics';
 
 const TOOLS = [
   { id: '1', name: 'Gemini', url: 'https://gemini.google.com/', description: 'Google\'s multimodal AI model', icon: 'google', color: '#4285F4', appUrl: 'googleapp://' },
@@ -18,6 +19,10 @@ const TOOLS = [
 
 export const ExploreScreen = () => {
   const insets = useSafeAreaInsets();
+
+  React.useEffect(() => {
+    logScreenView('ExploreScreen');
+  }, []);
 
   const handleOpenTool = async (item: typeof TOOLS[0]) => {
     if (item.appUrl) {

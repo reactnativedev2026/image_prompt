@@ -25,7 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export const globalNavigationRef = createNavigationContainerRef<any>();
 
 export const CustomDrawer = () => {
-  const { drawerOpen, setDrawerOpen } = useAppContext();
+  const { drawerOpen, setDrawerOpen, setRatingModalOpen } = useAppContext();
   const [aboutVisible, setAboutVisible] = useState(false);
   const [termsVisible, setTermsVisible] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -139,6 +139,11 @@ export const CustomDrawer = () => {
 
               <View style={styles.divider} />
 
+              <TouchableOpacity style={styles.menuItem} onPress={() => { handleClose(); setTimeout(() => setRatingModalOpen(true), 350); }}>
+                <Icon name="star-outline" size={22} color="#FFB300" />
+                <Text style={styles.menuLabelSecondary}>Rate Us ⭐</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity style={styles.menuItem} onPress={() => setAboutVisible(true)}>
                 <Icon name="information-outline" size={22} color="#94A3B8" />
                 <Text style={styles.menuLabelSecondary}>About Us</Text>
@@ -226,6 +231,7 @@ export const CustomDrawer = () => {
           </View>
         </View>
       </Modal>
+
     </View>
   );
 };

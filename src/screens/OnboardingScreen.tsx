@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
 import { fetchCategories, fetchPrompts } from '../utils/api';
+import { logScreenView } from '../utils/analytics';
 
 const { width } = Dimensions.get('window');
 
@@ -18,6 +19,7 @@ export const OnboardingScreen = () => {
   const progressWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    logScreenView('OnboardingScreen');
     // 1. Trigger backend wake-up immediately
     fetchCategories().catch(() => {});
     fetchPrompts().catch(() => {});

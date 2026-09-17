@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
 import { fetchCategories, fetchTrendingPrompts, ApiCategory } from '../utils/api';
+import { logScreenView } from '../utils/analytics';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 40) / 3;
@@ -134,6 +135,10 @@ export const TrendingScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    logScreenView('TrendingScreen');
+  }, []);
 
   // ── Pagination State (20 items per page) ──
   const PAGE_LIMIT = 20;

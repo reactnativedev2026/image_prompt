@@ -15,6 +15,7 @@ import { PromptItem } from '../data/mockPrompts';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { logScreenView } from '../utils/analytics';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 40) / 3;
@@ -115,6 +116,10 @@ export const FavoritesScreen = () => {
   const navigation = useNavigation<any>();
   const { favorites, toggleFavorite } = useAppContext();
   const insets = useSafeAreaInsets();
+
+  React.useEffect(() => {
+    logScreenView('FavoritesScreen');
+  }, []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 10 }]}>

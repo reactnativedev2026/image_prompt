@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "727912168101",
+    "project_id": "proprompt-7def3",
+    "storage_bucket": "proprompt-7def3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:727912168101:android:e705f67e8cc40f443d2b4c",
+        "android_client_info": {
+          "package_name": "com.imageprompt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2ZmGlXq8sP6LQCq6OpKip9dwHomVlYbU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

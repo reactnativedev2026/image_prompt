@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
 import { fetchCategories, fetchPrompts, ApiCategory } from '../utils/api';
+import { logScreenView, logSelectCategory, logSearchPrompt } from '../utils/analytics';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 40) / 3;
@@ -142,6 +143,16 @@ export const GalleryScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dbCategories, setDbCategories] = useState<ApiCategory[]>([]);
+
+  useEffect(() => {
+    logScreenView('GalleryScreen');
+  }, []);
+
+  useEffect(() => {
+    if (selectedCategory) {
+      logSelectCategory(selectedCategory);
+    }
+  }, [selectedCategory]);
 
   // ── Pagination State (20 items per page) ──
   const PAGE_LIMIT = 20;

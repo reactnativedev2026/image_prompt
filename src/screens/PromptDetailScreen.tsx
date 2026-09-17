@@ -27,6 +27,7 @@ import { useAppContext } from '../store/AppContext';
 import { mockPrompts, PromptItem } from '../data/mockPrompts';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
+import { logScreenView, logCopyPrompt, logSharePrompt, logToggleFavorite } from '../utils/analytics';
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -92,15 +93,22 @@ const ReelItem = ({
 
   const handleCopy = () => {
     Clipboard.setString(item.promptText);
+    logCopyPrompt(item.id, meta.title);
     showCopiedToast();
   };
 
   const handleShare = async () => {
     try {
+      logSharePrompt(item.id, meta.title);
       await RNShare.share({ message: `✨ Pro Prompt:\n\n${item.promptText}` });
     } catch (e: any) {
       console.error(e.message);
     }
+  };
+
+  const handleFavoritePress = () => {
+    logToggleFavorite(item.id, meta.title, !favored);
+    toggleFavorite(item);
   };
 
   return (
@@ -124,7 +132,7 @@ const ReelItem = ({
 
           <TouchableOpacity
             style={styles.headerBtn}
-            onPress={() => toggleFavorite(item)}
+            onPress={handleFavoritePress}
             activeOpacity={0.7}
           >
             <Icon
@@ -151,7 +159,7 @@ const ReelItem = ({
         </View>
 
         {/* ── Title ── */}
-        <Text style={styles.titleText}>{meta.title}</Text>
+        {/* <Text style={styles.titleText}>{meta.title}</Text> */}
 
         {/* ── Prompt Section ── */}
         <View style={styles.sectionHeader}>
@@ -549,6 +557,10 @@ export const PromptDetailScreen = () => {
   const safeInitialIndex = initialIndex !== -1 ? initialIndex : 0;
 
   React.useEffect(() => {
+    logScreenView('PromptDetailScreen');
+  }, []);
+
+  React.useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -706,7 +718,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
-    marginTop: 8,
+    marginTop: 15,
   },
   sectionHeaderTitle: {
     flexDirection: 'row',

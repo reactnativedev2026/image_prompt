@@ -11,6 +11,8 @@ interface AppContextProps {
   setDefaultTool: (tool: string) => void;
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
+  ratingModalOpen: boolean;
+  setRatingModalOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -19,6 +21,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [favorites, setFavorites] = useState<PromptItem[]>([]);
   const [defaultTool, setDefaultToolState] = useState<string>('Gemini');
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+  const [ratingModalOpen, setRatingModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     loadData();
@@ -85,7 +88,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       defaultTool,
       setDefaultTool,
       drawerOpen,
-      setDrawerOpen
+      setDrawerOpen,
+      ratingModalOpen,
+      setRatingModalOpen,
     }}>
       {children}
     </AppContext.Provider>
