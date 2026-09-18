@@ -28,6 +28,7 @@ import { mockPrompts, PromptItem } from '../data/mockPrompts';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
 import { logScreenView, logCopyPrompt, logSharePrompt, logToggleFavorite } from '../utils/analytics';
+import { PLAY_STORE_URL } from '../constants';
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -100,7 +101,10 @@ const ReelItem = ({
   const handleShare = async () => {
     try {
       logSharePrompt(item.id, meta.title);
-      await RNShare.share({ message: `✨ Pro Prompt:\n\n${item.promptText}` });
+      await RNShare.share({
+        title: 'Share Prompt',
+        message: `✨ Pro Prompt:\n\n${item.promptText}\n\n📲 Download Pro Prompt App for more:\n${PLAY_STORE_URL}`,
+      });
     } catch (e: any) {
       console.error(e.message);
     }

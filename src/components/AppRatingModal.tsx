@@ -16,9 +16,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import InAppReview from 'react-native-in-app-review';
 
 import { colors } from '../theme/colors';
+import { PLAY_STORE_URL } from '../constants';
 
-// Fallback to project bundle ID for Play Store URL (replace with correct one if known)
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.imageprompt';
 const HAS_RATED_KEY = 'app_has_rated';
 const LAST_PROMPT_KEY = 'app_last_rating_prompt';
 

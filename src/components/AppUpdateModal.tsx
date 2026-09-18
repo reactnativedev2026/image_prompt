@@ -5,8 +5,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import SpInAppUpdates, { IAUUpdateKind, IAUInstallStatus } from 'sp-react-native-in-app-updates';
 import { colors } from '../theme/colors';
+import { PLAY_STORE_URL } from '../constants';
 
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.imageprompt';
 const LAST_PROMPT_KEY = 'LAST_UPDATE_PROMPT_DATE';
 
 const ACCENT = colors.primaryDark;

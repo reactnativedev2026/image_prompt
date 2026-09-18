@@ -14,6 +14,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import LinearGradient from 'react-native-linear-gradient';
+import { PLAY_STORE_URL } from '../constants';
 
 export const SettingsScreen = () => {
   const { clearFavorites } = useAppContext();
@@ -36,7 +37,8 @@ export const SettingsScreen = () => {
   const handleShareApp = async () => {
     try {
       await RNShare.share({
-        message: '✨ Pro Prompt - Create stunning AI images with these curated prompts!\nDownload now and start generating!',
+        title: 'Share Pro Prompt App',
+        message: `✨ Pro Prompt - Create stunning AI images with these curated prompts!\n\n📲 Download now from Google Play Store:\n${PLAY_STORE_URL}`,
       });
     } catch (e: any) {
       console.error(e.message);
