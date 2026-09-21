@@ -29,6 +29,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
 import { logScreenView, logCopyPrompt, logSharePrompt, logToggleFavorite } from '../utils/analytics';
 import { PLAY_STORE_URL } from '../constants';
+import { prefetchPromptImages } from '../utils/imagePrefetch';
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -562,7 +563,11 @@ export const PromptDetailScreen = () => {
 
   React.useEffect(() => {
     logScreenView('PromptDetailScreen');
-  }, []);
+    if (promptsList && promptsList.length > 0) {
+      const nextPrompts = promptsList.slice(Math.max(0, safeInitialIndex - 1), safeInitialIndex + 6);
+      prefetchPromptImages(nextPrompts, 6);
+    }
+  }, [safeInitialIndex, promptsList]);
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {

@@ -21,6 +21,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
 import { fetchCategories, fetchTrendingPrompts, ApiCategory } from '../utils/api';
 import { logScreenView } from '../utils/analytics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { prefetchPromptImages } from '../utils/imagePrefetch';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 40) / 3;
@@ -47,7 +49,7 @@ const getPromptDisplayMeta = (id: string, category: string) => {
   return metas[id] || { title: category + ' Item', rating: '3.0K' };
 };
 
-const AnimatedTrendingCard = ({
+const AnimatedTrendingCard = React.memo(({
   item,
   index,
   navigation,
@@ -69,15 +71,15 @@ const AnimatedTrendingCard = ({
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 300,
-        delay: Math.min(index * 30, 300),
+        duration: 250,
+        delay: Math.min(index * 20, 200),
         useNativeDriver: true,
       }),
       Animated.spring(scale, {
         toValue: 1,
         friction: 8,
         tension: 50,
-        delay: Math.min(index * 30, 300),
+        delay: Math.min(index * 20, 200),
         useNativeDriver: true,
       }),
     ]).start();
@@ -93,7 +95,11 @@ const AnimatedTrendingCard = ({
         onPress={() => navigation.navigate('PromptDetail', { item, promptsList })}
         style={styles.cardInner}
       >
-        <Image source={{ uri: item.imageUrl }} style={styles.image} />
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={styles.image}
+          fadeDuration={Platform.OS === 'android' ? 250 : 0}
+        />
         {/* Trending Fire Badge */}
         <View style={styles.fireBadge}>
           <Icon name="fire" size={12} color="#FFF" />
@@ -101,9 +107,6 @@ const AnimatedTrendingCard = ({
 
         {/* Info overlayed on bottom of image */}
         <View style={styles.cardInfoOverlay}>
-          {/* <Text style={styles.cardTitle} numberOfLines={1}>
-            {meta.title}
-          </Text> */}
           <View style={styles.cardFooter}>
             <View style={styles.ratingWrap}>
               <Icon name="star" size={10} color="#FFB300" />
@@ -124,21 +127,42 @@ const AnimatedTrendingCard = ({
       </TouchableOpacity>
     </Animated.View>
   );
-};
+});
 
 export const TrendingScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { isFavorite, toggleFavorite } = useAppContext();
+  const { isFavorite, toggleFavorite, preloadedTrending, preloadedCategories } = useAppContext();
 
-  const [prompts, setPrompts] = useState<PromptItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [prompts, setPrompts] = useState<PromptItem[]>(
+    preloadedTrending.length > 0 ? preloadedTrending : []
+  );
+  const [loading, setLoading] = useState(preloadedTrending.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Debounce search input by 300ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
     logScreenView('TrendingScreen');
   }, []);
+
+  // Sync when preloadedTrending becomes available
+  useEffect(() => {
+    if (prompts.length === 0 && preloadedTrending.length > 0) {
+      setPrompts(preloadedTrending);
+      setLoading(false);
+    }
+  }, [preloadedTrending]);
 
   // ── Pagination State (20 items per page) ──
   const PAGE_LIMIT = 20;
@@ -151,19 +175,20 @@ export const TrendingScreen = () => {
 
   const loadTrendingData = async (pageNum = 1, isRefresh = false) => {
     if (pageNum === 1) {
-      if (!isRefresh) setLoading(true);
+      // If we don't already have prompts, show spinner; otherwise silently revalidate in background
+      if (!isRefresh && prompts.length === 0) setLoading(true);
     } else {
       setLoadingMore(true);
     }
 
     try {
       const [cats, trendingPts] = await Promise.all([
-        fetchCategories(),
+        preloadedCategories.length > 0 ? Promise.resolve(preloadedCategories) : fetchCategories(),
         fetchTrendingPrompts(undefined, pageNum, PAGE_LIMIT),
       ]);
 
       if (trendingPts && trendingPts.length > 0) {
-        const mapped = trendingPts.map(p => {
+        const mapped: PromptItem[] = trendingPts.map(p => {
           const catObj = cats.find(c => c.id === p.category_id);
           return {
             id: String(p.id),
@@ -175,8 +200,12 @@ export const TrendingScreen = () => {
           };
         });
 
+        // Prefetch images into native cache
+        prefetchPromptImages(mapped, 12);
+
         if (pageNum === 1) {
           setPrompts(mapped);
+          AsyncStorage.setItem('CACHE_TRENDING_PROMPTS_V1', JSON.stringify(mapped)).catch(() => {});
         } else {
           setPrompts(prev => {
             const existingIds = new Set(prev.map(item => item.id));
@@ -201,7 +230,7 @@ export const TrendingScreen = () => {
       }
     } catch (e) {
       console.error('Error fetching trending prompts:', e);
-      if (pageNum === 1) {
+      if (pageNum === 1 && prompts.length === 0) {
         const fallback = mockPrompts.slice(0, 10).map(p => ({
           ...p,
           isTrending: true,
@@ -217,6 +246,15 @@ export const TrendingScreen = () => {
   };
 
   useEffect(() => {
+    // If we already have preloaded data on initial mount, skip full blocking load and silently revalidate
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      if (preloadedTrending.length > 0) {
+        // Data already present! Silent background revalidate
+        loadTrendingData(1, true);
+        return;
+      }
+    }
     setPage(1);
     setHasMore(true);
     loadTrendingData(1, false);
@@ -236,10 +274,10 @@ export const TrendingScreen = () => {
   };
 
   const filtered = prompts.filter(item => {
-    if (!searchQuery.trim()) return true;
+    if (!debouncedSearchQuery.trim()) return true;
     return (
-      item.promptText.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase())
+      item.promptText.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
     );
   });
 
@@ -294,6 +332,9 @@ export const TrendingScreen = () => {
           numColumns={3}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={9}
+          maxToRenderPerBatch={9}
+          windowSize={5}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -432,13 +473,14 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#1E1E2D',
+    backgroundColor: '#161626',
     position: 'relative',
   },
   image: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+    backgroundColor: '#161626',
   },
   fireBadge: {
     position: 'absolute',

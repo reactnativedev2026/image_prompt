@@ -22,6 +22,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
 import { fetchCategories, fetchPrompts, ApiCategory } from '../utils/api';
 import { logScreenView, logSelectCategory, logSearchPrompt } from '../utils/analytics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { prefetchPromptImages } from '../utils/imagePrefetch';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 40) / 3;
@@ -60,7 +62,7 @@ const getPromptDisplayMeta = (id: string, category: string) => {
   return metas[id] || { title: category + ' Item', rating: '3.0K' };
 };
 
-const AnimatedCard = ({ item, index, navigation, toggleFavorite, isFavorite, promptsList }: {
+const AnimatedCard = React.memo(({ item, index, navigation, toggleFavorite, isFavorite, promptsList }: {
   item: PromptItem;
   index: number;
   navigation: any;
@@ -75,15 +77,15 @@ const AnimatedCard = ({ item, index, navigation, toggleFavorite, isFavorite, pro
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 300,
-        delay: Math.min(index * 30, 300),
+        duration: 250,
+        delay: Math.min(index * 20, 200),
         useNativeDriver: true,
       }),
       Animated.spring(scale, {
         toValue: 1,
         friction: 8,
         tension: 50,
-        delay: Math.min(index * 30, 300),
+        delay: Math.min(index * 20, 200),
         useNativeDriver: true,
       })
     ]).start();
@@ -99,7 +101,11 @@ const AnimatedCard = ({ item, index, navigation, toggleFavorite, isFavorite, pro
         onPress={() => navigation.navigate('PromptDetail', { item, promptsList })}
         style={styles.cardInner}
       >
-        <Image source={{ uri: item.imageUrl }} style={styles.image} />
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={styles.image}
+          fadeDuration={Platform.OS === 'android' ? 250 : 0}
+        />
         {/* Top-Right Badge: Fire for trending, Image icon for regular */}
         <View style={[styles.imageIconBadge, item.isTrending && { backgroundColor: 'rgba(255, 61, 0, 0.9)' }]}>
           <Icon name={item.isTrending ? 'fire' : 'image'} size={12} color="#FFF" />
@@ -107,9 +113,6 @@ const AnimatedCard = ({ item, index, navigation, toggleFavorite, isFavorite, pro
 
         {/* Info overlayed on bottom of image */}
         <View style={styles.cardInfoOverlay}>
-          {/* <Text style={styles.cardTitle} numberOfLines={1}>
-            {meta.title}
-          </Text> */}
           <View style={styles.cardFooter}>
             <View style={styles.ratingWrap}>
               <Icon name="star" size={10} color="#FFB300" />
@@ -130,19 +133,44 @@ const AnimatedCard = ({ item, index, navigation, toggleFavorite, isFavorite, pro
       </TouchableOpacity>
     </Animated.View>
   );
-};
+});
 
 export const GalleryScreen = () => {
   const navigation = useNavigation<any>();
-  const { isFavorite, toggleFavorite, setDrawerOpen } = useAppContext();
+  const {
+    isFavorite,
+    toggleFavorite,
+    setDrawerOpen,
+    preloadedPrompts,
+    preloadedCategories,
+  } = useAppContext();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const [prompts, setPrompts] = useState<PromptItem[]>([]);
-  const [categories, setCategories] = useState<string[]>(['All', 'Trending']);
-  const [loading, setLoading] = useState(true);
+  // Debounce search input by 300ms to avoid hammering API
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const [prompts, setPrompts] = useState<PromptItem[]>(
+    preloadedPrompts.length > 0 ? preloadedPrompts : []
+  );
+  const [categories, setCategories] = useState<string[]>(
+    preloadedCategories.length > 0
+      ? ['All', 'Trending', ...preloadedCategories.map(c => c.name)]
+      : ['All', 'Trending']
+  );
+  const [loading, setLoading] = useState(preloadedPrompts.length === 0);
   const [refreshing, setRefreshing] = useState(false);
-  const [dbCategories, setDbCategories] = useState<ApiCategory[]>([]);
+  const [dbCategories, setDbCategories] = useState<ApiCategory[]>(
+    preloadedCategories.length > 0 ? preloadedCategories : []
+  );
+
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
     logScreenView('GalleryScreen');
@@ -153,6 +181,18 @@ export const GalleryScreen = () => {
       logSelectCategory(selectedCategory);
     }
   }, [selectedCategory]);
+
+  // If preloadedPrompts become available shortly after mount
+  useEffect(() => {
+    if (prompts.length === 0 && preloadedPrompts.length > 0 && selectedCategory === 'All' && !debouncedSearchQuery.trim()) {
+      setPrompts(preloadedPrompts);
+      if (preloadedCategories.length > 0) {
+        setDbCategories(preloadedCategories);
+        setCategories(['All', 'Trending', ...preloadedCategories.map(c => c.name)]);
+      }
+      setLoading(false);
+    }
+  }, [preloadedPrompts, preloadedCategories]);
 
   // ── Pagination State (20 items per page) ──
   const PAGE_LIMIT = 20;
@@ -180,7 +220,7 @@ export const GalleryScreen = () => {
     });
   };
 
-  const loadData = async (pageNum = 1, isRefresh = false) => {
+  const loadData = async (pageNum = 1, isRefresh = false, searchStr = debouncedSearchQuery) => {
     if (pageNum === 1) {
       if (!isRefresh) setLoading(true);
     } else {
@@ -200,7 +240,7 @@ export const GalleryScreen = () => {
 
       const [cats, pts] = await Promise.all([
         dbCategories.length === 0 ? fetchCategories() : Promise.resolve(dbCategories),
-        fetchPrompts(catId, searchQuery.trim() || undefined, isTrendingFilter, pageNum, PAGE_LIMIT)
+        fetchPrompts(catId, searchStr.trim() || undefined, isTrendingFilter, pageNum, PAGE_LIMIT)
       ]);
 
       if (dbCategories.length === 0 && cats && cats.length > 0) {
@@ -224,8 +264,14 @@ export const GalleryScreen = () => {
           };
         });
 
+        // Prefetch images for the freshly loaded prompts into native cache
+        prefetchPromptImages(mappedPrompts, 12);
+
         if (pageNum === 1) {
           setPrompts(mappedPrompts);
+          if (selectedCategory === 'All' && !searchStr.trim()) {
+            AsyncStorage.setItem('CACHE_HOME_PROMPTS_V1', JSON.stringify(mappedPrompts)).catch(() => {});
+          }
         } else {
           setPrompts(prev => {
             const existingIds = new Set(prev.map(item => item.id));
@@ -238,7 +284,7 @@ export const GalleryScreen = () => {
         setPage(pageNum);
       } else {
         if (pageNum === 1) {
-          if (selectedCategory === 'All' && !searchQuery.trim()) {
+          if (selectedCategory === 'All' && !searchStr.trim()) {
             const mappedMock = mockPrompts.map((p, idx) => ({
               ...p,
               viewCount: p.viewCount || Math.floor(Math.random() * 1000) + 100,
@@ -273,10 +319,19 @@ export const GalleryScreen = () => {
   };
 
   useEffect(() => {
+    // If it's initial mount and we already have preloaded data for 'All' without search query:
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      if (preloadedPrompts.length > 0 && selectedCategory === 'All' && !debouncedSearchQuery.trim()) {
+        // Data is already loaded from Onboarding! Do NOT reload again from network!
+        return;
+      }
+    }
+
     setPage(1);
     setHasMore(true);
-    loadData(1, false);
-  }, [selectedCategory, searchQuery]);
+    loadData(1, false, debouncedSearchQuery);
+  }, [selectedCategory, debouncedSearchQuery]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -293,9 +348,9 @@ export const GalleryScreen = () => {
 
   const filteredPrompts = prompts.filter(item => {
     const matchesSearch =
-      !searchQuery.trim() ||
-      item.promptText.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase());
+      !debouncedSearchQuery.trim() ||
+      item.promptText.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
 
     let matchesCategory = false;
     if (selectedCategory === 'All') {
@@ -437,6 +492,9 @@ export const GalleryScreen = () => {
           contentContainerStyle={[styles.gridContent, { flexGrow: 1 }]}
           showsVerticalScrollIndicator={false}
           alwaysBounceVertical={true}
+          initialNumToRender={9}
+          maxToRenderPerBatch={9}
+          windowSize={5}
           onScroll={(event) => {
             const offsetY = event.nativeEvent.contentOffset.y;
             if (offsetY > 300) {
@@ -685,14 +743,19 @@ const styles = StyleSheet.create({
   },
   cardInner: {
     height: IMAGE_HEIGHT,
-    backgroundColor: '#121222',
+    backgroundColor: '#161626',
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#1F1F35',
     position: 'relative',
   },
-  image: { width: '100%', height: '100%', resizeMode: 'cover' },
+  image: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+    backgroundColor: '#161626',
+  },
   imageIconBadge: {
     position: 'absolute',
     top: 6,

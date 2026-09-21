@@ -3,14 +3,15 @@ import { View, Text, StyleSheet, Animated, Dimensions, Image } from 'react-nativ
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
-import { fetchCategories, fetchPrompts } from '../utils/api';
+import { useAppContext } from '../store/AppContext';
 import { logScreenView } from '../utils/analytics';
 
 const { width } = Dimensions.get('window');
 
 export const OnboardingScreen = () => {
   const navigation = useNavigation<any>();
-  
+  const { preloadData } = useAppContext();
+
   // Animation values
   const logoScale = useRef(new Animated.Value(0.3)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -20,9 +21,8 @@ export const OnboardingScreen = () => {
 
   useEffect(() => {
     logScreenView('OnboardingScreen');
-    // 1. Trigger backend wake-up immediately
-    fetchCategories().catch(() => {});
-    fetchPrompts().catch(() => {});
+    // 1. Trigger data preload immediately during onboarding animation
+    preloadData();
 
     // 2. Start Animations
     Animated.parallel([
@@ -55,7 +55,7 @@ export const OnboardingScreen = () => {
       // Loading Progress bar animation (animates over 3 seconds)
       Animated.timing(progressWidth, {
         toValue: 1,
-        duration: 3000,
+        duration: 2000,
         useNativeDriver: false,
       })
     ]).start();
@@ -63,7 +63,7 @@ export const OnboardingScreen = () => {
     // 3. Navigation redirect after 3.2 seconds
     const timer = setTimeout(() => {
       navigation.replace('Main');
-    }, 3200);
+    }, 2200);
 
     return () => clearTimeout(timer);
   }, []);
