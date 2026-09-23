@@ -38,12 +38,14 @@ export const fetchPrompts = async (
   search?: string,
   isTrending?: boolean,
   page: number = 1,
-  limit: number = 21
+  limit: number = 21,
+  order: string = 'random'
 ): Promise<ApiPrompt[]> => {
   try {
     const params: any = {
       page,
       limit,
+      order,
     };
     if (categoryId) {
       params.category_id = categoryId;
@@ -65,10 +67,11 @@ export const fetchPrompts = async (
 export const fetchTrendingPrompts = async (
   categoryId?: number,
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  order: string = 'random'
 ): Promise<ApiPrompt[]> => {
   try {
-    const params: any = { page, limit };
+    const params: any = { page, limit, order };
     if (categoryId) {
       params.category_id = categoryId;
     }

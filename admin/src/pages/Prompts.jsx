@@ -98,6 +98,8 @@ export default function Prompts() {
       const params = {
         page,
         limit,
+        order: 'latest',
+        include_all: true,
         search: search || undefined,
         category_id: selectedCategory || undefined,
         is_trending: filterTrending !== '' ? (filterTrending === 'true') : undefined

@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from sqlalchemy.sql.expression import func
 from app.database import get_db
 from app.models import Category, Prompt
 from app.schemas.models_schema import CategoryResponse, PromptResponse
@@ -17,17 +18,24 @@ def get_categories(db: Session = Depends(get_db)):
     return db.query(Category).all()
 
 
-# ── Fetch Prompts with filters & search (App view) with 20-20 Pagination ──
+# ── Fetch Prompts with filters & search (App view) with Random / Ordered support ──
 @router.get("/prompts", response_model=list[PromptResponse])
 def get_prompts(
+    response: Response,
     category_id: int | None = Query(None, description="Filter prompts by Category ID"),
     is_trending: bool | None = Query(None, description="Filter prompts by trending status"),
     search: str | None = Query(None, description="Search prompts by prompt text"),
+    order: str = Query("random", description="Ordering: 'random', 'latest', 'oldest', 'popular'"),
     include_all: bool = Query(False, description="Include all prompts including inactive S3"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
 ):
+    # Disable client/proxy caching so every pull/refresh returns freshly randomized data
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
     query = db.query(Prompt)
     
     # Hide inactive AWS S3 images from frontend mobile app (keeps DB data intact)
@@ -43,9 +51,18 @@ def get_prompts(
     if search:
         query = query.filter(Prompt.prompt_text.ilike(f"%{search}%"))
         
-    # Apply order: latest first (simple regular order), offset and limit pagination
+    # Apply Ordering: Default is random shuffle
+    if order == "random":
+        query = query.order_by(func.random())
+    elif order == "oldest":
+        query = query.order_by(Prompt.id.asc())
+    elif order in ("popular", "views"):
+        query = query.order_by(Prompt.view_count.desc())
+    else:  # "latest"
+        query = query.order_by(Prompt.id.desc())
+
     offset = (page - 1) * limit
-    prompts = query.order_by(Prompt.id.desc()).offset(offset).limit(limit).all()
+    prompts = query.offset(offset).limit(limit).all()
     
     # Dynamically normalize image_url to CDN if configured
     for p in prompts:
@@ -57,12 +74,19 @@ def get_prompts(
 # ── Fetch Trending Prompts Directly (App view dedicated endpoint) ──
 @router.get("/prompts/trending", response_model=list[PromptResponse])
 def get_trending_prompts(
+    response: Response,
     category_id: int | None = Query(None, description="Filter trending prompts by Category ID"),
+    order: str = Query("random", description="Ordering: 'random', 'latest', 'popular'"),
     include_all: bool = Query(False, description="Include all prompts including inactive S3"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
 ):
+    # Disable client/proxy caching so every pull/refresh returns freshly randomized data
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
     query = db.query(Prompt).filter(Prompt.is_trending == True)
     
     # Hide inactive AWS S3 images from frontend mobile app
@@ -72,8 +96,16 @@ def get_trending_prompts(
     if category_id is not None:
         query = query.filter(Prompt.category_id == category_id)
 
+    # Apply Ordering: Default is random shuffle
+    if order == "random":
+        query = query.order_by(func.random())
+    elif order in ("popular", "views"):
+        query = query.order_by(Prompt.view_count.desc())
+    else:  # "latest"
+        query = query.order_by(Prompt.id.desc())
+
     offset = (page - 1) * limit
-    prompts = query.order_by(Prompt.id.desc()).offset(offset).limit(limit).all()
+    prompts = query.offset(offset).limit(limit).all()
     for p in prompts:
         p.image_url = normalize_image_url(p.image_url)
     return prompts
