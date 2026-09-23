@@ -10,7 +10,7 @@ from app.schemas.models_schema import (
     PromptCreateRequest, PromptResponse, PromptUpdateRequest
 )
 from app.routers.auth_utils import hash_password, verify_password, create_access_token, get_current_admin
-from app.services.s3 import upload_image_to_s3, rename_or_move_s3_image, delete_s3_image
+from app.services.storage import upload_image, rename_or_move_image, delete_image
 
 router = APIRouter(
     prefix="/api/admin",
@@ -55,29 +55,28 @@ def login_admin(payload: AdminLoginRequest, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer"}
 
 
-# ── AWS S3 Media Upload API ──
+# ── Media Upload API (Cloudinary / S3) ──
 @router.post("/upload", status_code=status.HTTP_200_OK)
-def upload_image(
+def upload_image_endpoint(
     file: UploadFile = File(...),
     current_admin: str = Depends(get_current_admin)
 ):
     try:
-        # Upload the file bytes directly to AWS S3 and convert to WebP
-        upload_result = upload_image_to_s3(
+        # Upload the file bytes directly to active storage provider
+        upload_result = upload_image(
             file.file,
             filename=file.filename or "image.jpg",
-            folder="ai_prompt_gallery",
-            convert_to_webp=True
+            folder="ai_prompt_gallery"
         )
         return {
             "image_url": upload_result.get("image_url"),
-            "public_id": upload_result.get("key"),
-            "key": upload_result.get("key")
+            "public_id": upload_result.get("public_id") or upload_result.get("key"),
+            "key": upload_result.get("key") or upload_result.get("public_id")
         }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"S3 upload failed: {str(e)}"
+            detail=f"Upload failed: {str(e)}"
         )
 
 
@@ -149,19 +148,19 @@ def create_prompt(
     db.commit()
     db.refresh(new_prompt)
     
-    # Organize image on S3 to include Category and prompt text
+    # Organize image in storage to include Category and prompt text
     if new_prompt.image_url:
         safe_cat_name = sanitize_for_filename(cat.name, 20)
         short_prompt = sanitize_for_filename(new_prompt.prompt_text, 30)
-        new_s3_key = f"ai_prompt_gallery/{safe_cat_name}/{safe_cat_name}_prompt_{new_prompt.id}_{short_prompt}.webp"
+        new_key = f"ai_prompt_gallery/{safe_cat_name}/{safe_cat_name}_prompt_{new_prompt.id}_{short_prompt}"
         
         try:
-            updated_url = rename_or_move_s3_image(new_prompt.image_url, new_s3_key)
+            updated_url = rename_or_move_image(new_prompt.image_url, new_key)
             if updated_url != new_prompt.image_url:
                 new_prompt.image_url = updated_url
                 db.commit()
         except Exception as e:
-            print(f"S3 file organize failed: {e}")
+            print(f"File organize failed: {e}")
 
     return new_prompt
 
@@ -203,21 +202,21 @@ def update_prompt(
 
     db.commit()
     
-    # If a new image was uploaded, organize it on S3
+    # If a new image was uploaded, organize it in storage
     if image_changed:
         cat_for_rename = cat if cat else db.query(Category).filter(Category.id == prompt.category_id).first()
         if cat_for_rename and prompt.image_url:
             safe_cat_name = sanitize_for_filename(cat_for_rename.name, 20)
             short_prompt = sanitize_for_filename(prompt.prompt_text, 30)
-            new_s3_key = f"ai_prompt_gallery/{safe_cat_name}/{safe_cat_name}_prompt_{prompt.id}_{short_prompt}.webp"
+            new_key = f"ai_prompt_gallery/{safe_cat_name}/{safe_cat_name}_prompt_{prompt.id}_{short_prompt}"
             
             try:
-                updated_url = rename_or_move_s3_image(prompt.image_url, new_s3_key)
+                updated_url = rename_or_move_image(prompt.image_url, new_key)
                 if updated_url != prompt.image_url:
                     prompt.image_url = updated_url
                     db.commit()
             except Exception as e:
-                print(f"S3 rename failed during update: {e}")
+                print(f"Rename failed during update: {e}")
 
     db.refresh(prompt)
     return prompt
@@ -253,9 +252,9 @@ def delete_prompt(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Prompt not found"
         )
-    # Remove image from S3 if exists
+    # Remove image from storage if exists
     if prompt.image_url:
-        delete_s3_image(prompt.image_url)
+        delete_image(prompt.image_url)
         
     db.delete(prompt)
     db.commit()

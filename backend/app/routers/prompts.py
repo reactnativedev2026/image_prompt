@@ -23,11 +23,16 @@ def get_prompts(
     category_id: int | None = Query(None, description="Filter prompts by Category ID"),
     is_trending: bool | None = Query(None, description="Filter prompts by trending status"),
     search: str | None = Query(None, description="Search prompts by prompt text"),
+    include_all: bool = Query(False, description="Include all prompts including inactive S3"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
 ):
     query = db.query(Prompt)
+    
+    # Hide inactive AWS S3 images from frontend mobile app (keeps DB data intact)
+    if not include_all:
+        query = query.filter(~Prompt.image_url.contains("amazonaws.com"))
     
     if category_id is not None:
         query = query.filter(Prompt.category_id == category_id)
@@ -53,11 +58,17 @@ def get_prompts(
 @router.get("/prompts/trending", response_model=list[PromptResponse])
 def get_trending_prompts(
     category_id: int | None = Query(None, description="Filter trending prompts by Category ID"),
+    include_all: bool = Query(False, description="Include all prompts including inactive S3"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
 ):
     query = db.query(Prompt).filter(Prompt.is_trending == True)
+    
+    # Hide inactive AWS S3 images from frontend mobile app
+    if not include_all:
+        query = query.filter(~Prompt.image_url.contains("amazonaws.com"))
+        
     if category_id is not None:
         query = query.filter(Prompt.category_id == category_id)
 

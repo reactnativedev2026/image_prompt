@@ -1,5 +1,7 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 from app.config import settings
 from app.database import engine, Base
@@ -22,7 +24,7 @@ except Exception as e:
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Prompt Trending Backend for managing AI image prompts with AWS S3 upload",
+    description="Prompt Trending Backend for managing AI image prompts with Cloudinary and Server Backup",
     version="1.0.0"
 )
 
@@ -34,6 +36,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount local media backup directory for static direct access
+media_backup_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "media_backup")
+os.makedirs(media_backup_dir, exist_ok=True)
+app.mount("/media_backup", StaticFiles(directory=media_backup_dir), name="media_backup")
 
 # Register routers
 app.include_router(admin.router)

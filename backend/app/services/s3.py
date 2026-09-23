@@ -1,9 +1,20 @@
-import boto3
+try:
+    import boto3
+    from botocore.exceptions import ClientError
+    HAS_BOTO3 = True
+except ImportError:
+    HAS_BOTO3 = False
+    ClientError = Exception
+
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 import io
 import uuid
 import re
-from PIL import Image
-from botocore.exceptions import ClientError
 from app.config import settings
 
 def get_s3_client():
@@ -64,9 +75,14 @@ def extract_key_from_url(url: str) -> str:
 def normalize_image_url(url: str) -> str:
     """
     Transforms an image URL according to current CDN / S3 config.
-    If CDN is added later, old S3 URLs in database are served via CDN automatically.
+    Leaves Cloudinary URLs untouched.
     """
     if not url:
+        return url
+    if "cloudinary.com" in url:
+        return url
+    provider = getattr(settings, "STORAGE_PROVIDER", "cloudinary").lower()
+    if provider != "s3":
         return url
     key = extract_key_from_url(url)
     if key and key.startswith("ai_prompt_gallery/"):
