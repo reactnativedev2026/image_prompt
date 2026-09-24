@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { mockPrompts, PromptItem } from '../data/mockPrompts';
@@ -207,6 +208,25 @@ export const GalleryScreen = () => {
   // Filter Modal & Sorting state
   const [filterVisible, setFilterVisible] = useState(false);
   const [sortBy, setSortBy] = useState<'default' | 'views' | 'alphabetical'>('default');
+  const [tempCategory, setTempCategory] = useState(selectedCategory);
+  const [tempSortBy, setTempSortBy] = useState<'default' | 'views' | 'alphabetical'>('default');
+
+  const openFilterModal = () => {
+    setTempCategory(selectedCategory);
+    setTempSortBy(sortBy);
+    setFilterVisible(true);
+  };
+
+  const applyFilter = () => {
+    setSelectedCategory(tempCategory);
+    setSortBy(tempSortBy);
+    setFilterVisible(false);
+  };
+
+  const resetFilter = () => {
+    setTempCategory('All');
+    setTempSortBy('default');
+  };
 
   const shufflePrompts = () => {
     setSortBy('default');
@@ -413,7 +433,7 @@ export const GalleryScreen = () => {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={styles.filterBtn} activeOpacity={0.8} onPress={() => setFilterVisible(true)}>
+        <TouchableOpacity style={styles.filterBtn} activeOpacity={0.8} onPress={openFilterModal}>
           <LinearGradient
             colors={colors.primaryGradient}
             start={{ x: 0, y: 0 }}
@@ -422,6 +442,9 @@ export const GalleryScreen = () => {
           >
             <Icon name="tune" size={20} color="#FFF" />
           </LinearGradient>
+          {(selectedCategory !== 'All' || sortBy !== 'default') && (
+            <View style={styles.filterActiveDot} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -575,43 +598,107 @@ export const GalleryScreen = () => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>🎛️ Filter & Sort</Text>
-              <TouchableOpacity onPress={() => setFilterVisible(false)} style={styles.modalCloseBtn}>
-                <Icon name="close" size={24} color="#FFF" />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity onPress={resetFilter} style={styles.resetBtn} activeOpacity={0.7}>
+                  <Text style={styles.resetBtnText}>Reset</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setFilterVisible(false)} style={styles.modalCloseBtn} activeOpacity={0.7}>
+                  <Icon name="close" size={22} color="#FFF" />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.modalBody}>
-              <Text style={styles.filterSectionLabel}>SORT PROMPTS BY</Text>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.modalBody}
+              style={{ maxHeight: Dimensions.get('window').height * 0.70 }}
+            >
+              {/* Category Filter Section */}
+              <Text style={styles.filterSectionLabel}>SELECT CATEGORY</Text>
+              <View style={styles.categoryChipWrap}>
+                {categories.map((cat) => {
+                  const isSelected = tempCategory === cat;
+                  const isTrending = cat === 'Trending';
+                  const label = isTrending ? '🔥 Trending' : cat;
+
+                  if (isSelected) {
+                    return (
+                      <TouchableOpacity
+                        key={cat}
+                        activeOpacity={0.8}
+                        onPress={() => setTempCategory(cat)}
+                        style={styles.categoryChipSelected}
+                      >
+                        <LinearGradient
+                          colors={isTrending ? ['#FF6B00', '#FF3D00'] : colors.primaryGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.categoryChipGradient}
+                        >
+                          <Text style={styles.categoryChipTextActive}>{label}</Text>
+                          <Icon name="check" size={14} color="#FFF" style={{ marginLeft: 4 }} />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    );
+                  }
+
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      activeOpacity={0.8}
+                      style={[
+                        styles.categoryChip,
+                        isTrending && { borderColor: '#FF6B0055', backgroundColor: '#FF6B0015' },
+                      ]}
+                      onPress={() => setTempCategory(cat)}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          isTrending && { color: '#FF8A00', fontWeight: '700' },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Sort Prompts Section */}
+              <Text style={[styles.filterSectionLabel, { marginTop: 22 }]}>SORT PROMPTS BY</Text>
 
               <TouchableOpacity
-                style={[styles.filterOption, sortBy === 'default' && styles.filterOptionActive]}
-                onPress={() => setSortBy('default')}
+                style={[styles.filterOption, tempSortBy === 'default' && styles.filterOptionActive]}
+                onPress={() => setTempSortBy('default')}
               >
-                <Icon name="clock-outline" size={20} color={sortBy === 'default' ? '#A15DFB' : '#94A3B8'} />
-                <Text style={[styles.filterOptionLabel, sortBy === 'default' && styles.filterOptionLabelActive]}>Default (Latest)</Text>
-                {sortBy === 'default' && <Icon name="check" size={20} color="#A15DFB" />}
+                <Icon name="clock-outline" size={20} color={tempSortBy === 'default' ? '#A15DFB' : '#94A3B8'} />
+                <Text style={[styles.filterOptionLabel, tempSortBy === 'default' && styles.filterOptionLabelActive]}>Default (Latest)</Text>
+                {tempSortBy === 'default' && <Icon name="check" size={20} color="#A15DFB" />}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.filterOption, sortBy === 'views' && styles.filterOptionActive]}
-                onPress={() => setSortBy('views')}
+                style={[styles.filterOption, tempSortBy === 'views' && styles.filterOptionActive]}
+                onPress={() => setTempSortBy('views')}
               >
-                <Icon name="eye-outline" size={20} color={sortBy === 'views' ? '#A15DFB' : '#94A3B8'} />
-                <Text style={[styles.filterOptionLabel, sortBy === 'views' && styles.filterOptionLabelActive]}>Popularity (Most Viewed)</Text>
-                {sortBy === 'views' && <Icon name="check" size={20} color="#A15DFB" />}
+                <Icon name="eye-outline" size={20} color={tempSortBy === 'views' ? '#A15DFB' : '#94A3B8'} />
+                <Text style={[styles.filterOptionLabel, tempSortBy === 'views' && styles.filterOptionLabelActive]}>Popularity (Most Viewed)</Text>
+                {tempSortBy === 'views' && <Icon name="check" size={20} color="#A15DFB" />}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.filterOption, sortBy === 'alphabetical' && styles.filterOptionActive]}
-                onPress={() => setSortBy('alphabetical')}
+                style={[styles.filterOption, tempSortBy === 'alphabetical' && styles.filterOptionActive]}
+                onPress={() => setTempSortBy('alphabetical')}
               >
-                <Icon name="alpha-a-box-outline" size={20} color={sortBy === 'alphabetical' ? '#A15DFB' : '#94A3B8'} />
-                <Text style={[styles.filterOptionLabel, sortBy === 'alphabetical' && styles.filterOptionLabelActive]}>Alphabetical (A-Z)</Text>
-                {sortBy === 'alphabetical' && <Icon name="check" size={20} color="#A15DFB" />}
+                <Icon name="alpha-a-box-outline" size={20} color={tempSortBy === 'alphabetical' ? '#A15DFB' : '#94A3B8'} />
+                <Text style={[styles.filterOptionLabel, tempSortBy === 'alphabetical' && styles.filterOptionLabelActive]}>Alphabetical (A-Z)</Text>
+                {tempSortBy === 'alphabetical' && <Icon name="check" size={20} color="#A15DFB" />}
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.applyBtn}
-                onPress={() => setFilterVisible(false)}
+                onPress={applyFilter}
+                activeOpacity={0.8}
               >
                 <LinearGradient
                   colors={colors.primaryGradient}
@@ -622,7 +709,7 @@ export const GalleryScreen = () => {
                   <Text style={styles.applyBtnText}>Apply Filter</Text>
                 </LinearGradient>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -893,6 +980,63 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800',
+  },
+  categoryChipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: '#1B1B32',
+    borderWidth: 1,
+    borderColor: '#1F1F35',
+  },
+  categoryChipSelected: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  categoryChipGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+  },
+  categoryChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  categoryChipTextActive: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  resetBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginRight: 10,
+  },
+  resetBtnText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterActiveDot: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF4D6D',
+    borderWidth: 1.5,
+    borderColor: '#09090F',
   },
   scrollToTopBtn: {
     position: 'absolute',

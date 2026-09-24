@@ -8,6 +8,7 @@ import { CustomDrawer } from './src/components/CustomDrawer';
 import AppUpdateModal from './src/components/AppUpdateModal';
 import AppRatingModal from './src/components/AppRatingModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors } from './src/theme/colors';
 
 const APP_OPEN_COUNT_KEY = 'app_open_count';
 const HAS_RATED_KEY = 'app_has_rated';
@@ -60,7 +61,7 @@ const App = () => {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <AppProvider>
         <AppContent />
       </AppProvider>
