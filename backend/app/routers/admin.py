@@ -21,29 +21,47 @@ router = APIRouter(
 # ── Overall Admin Stats API ──
 @router.get("/stats", status_code=status.HTTP_200_OK)
 def get_admin_stats(
+    include_all: bool = False,
     db: Session = Depends(get_db),
     current_admin: str = Depends(get_current_admin)
 ):
-    total_prompts = db.query(Prompt).count()
-    trending_prompts = db.query(Prompt).filter(Prompt.is_trending == True).count()
+    base_query = db.query(Prompt)
+    if not include_all:
+        base_query = base_query.filter(~Prompt.image_url.contains("amazonaws.com"))
+
+    total_prompts = base_query.count()
+    trending_prompts = base_query.filter(Prompt.is_trending == True).count()
     total_categories = db.query(Category).count()
-    total_views = db.query(func.coalesce(func.sum(Prompt.view_count), 0)).scalar() or 0
+    total_views = base_query.with_entities(func.coalesce(func.sum(Prompt.view_count), 0)).scalar() or 0
     
     # Category with prompt counts
+    if not include_all:
+        prompt_sub = (
+            db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
+            .filter(~Prompt.image_url.contains("amazonaws.com"))
+            .group_by(Prompt.category_id)
+            .subquery()
+        )
+    else:
+        prompt_sub = (
+            db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
+            .group_by(Prompt.category_id)
+            .subquery()
+        )
+
     category_counts = (
         db.query(
             Category.id,
             Category.name,
-            func.count(Prompt.id).label("prompt_count")
+            func.coalesce(prompt_sub.c.prompt_count, 0).label("prompt_count")
         )
-        .outerjoin(Prompt, Category.id == Prompt.category_id)
-        .group_by(Category.id, Category.name)
+        .outerjoin(prompt_sub, Category.id == prompt_sub.c.category_id)
         .order_by(Category.name.asc())
         .all()
     )
     
     categories_data = [
-        {"id": c.id, "name": c.name, "prompt_count": c.prompt_count}
+        {"id": c.id, "name": c.name, "prompt_count": c.prompt_count or 0}
         for c in category_counts
     ]
     

@@ -14,15 +14,31 @@ router = APIRouter(
 
 # ── Fetch Categories (App & Admin view) ──
 @router.get("/categories", response_model=list[CategoryResponse])
-def get_categories(db: Session = Depends(get_db)):
+def get_categories(
+    include_all: bool = Query(False, description="Include all prompts including inactive AWS S3"),
+    db: Session = Depends(get_db)
+):
+    if not include_all:
+        prompt_sub = (
+            db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
+            .filter(~Prompt.image_url.contains("amazonaws.com"))
+            .group_by(Prompt.category_id)
+            .subquery()
+        )
+    else:
+        prompt_sub = (
+            db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
+            .group_by(Prompt.category_id)
+            .subquery()
+        )
+
     category_counts = (
         db.query(
             Category.id,
             Category.name,
-            func.count(Prompt.id).label("prompt_count")
+            func.coalesce(prompt_sub.c.prompt_count, 0).label("prompt_count")
         )
-        .outerjoin(Prompt, Category.id == Prompt.category_id)
-        .group_by(Category.id, Category.name)
+        .outerjoin(prompt_sub, Category.id == prompt_sub.c.category_id)
         .order_by(Category.name.asc())
         .all()
     )
@@ -45,6 +61,7 @@ def get_prompts(
     search: str | None = Query(None, description="Search prompts by prompt text"),
     order: str = Query("random", description="Ordering: 'random', 'latest', 'oldest', 'popular'"),
     include_all: bool = Query(False, description="Include all prompts including inactive S3"),
+    only_aws: bool = Query(False, description="Filter only AWS S3 prompts"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     limit: int = Query(20, ge=1, le=500, description="Items per page"),
     db: Session = Depends(get_db)
@@ -56,8 +73,10 @@ def get_prompts(
     
     query = db.query(Prompt)
     
-    # Hide inactive AWS S3 images from frontend mobile app (keeps DB data intact)
-    if not include_all:
+    # Conditional AWS filtering
+    if only_aws:
+        query = query.filter(Prompt.image_url.contains("amazonaws.com"))
+    elif not include_all:
         query = query.filter(~Prompt.image_url.contains("amazonaws.com"))
     
     if category_id is not None:

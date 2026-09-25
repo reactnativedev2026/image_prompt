@@ -34,7 +34,8 @@ import {
   Collections as CollectionsIcon,
   Clear as ClearIcon,
   Refresh as RefreshIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  FolderOpen as FolderIcon
 } from '@mui/icons-material';
 import api, { getErrorMessage } from '../api';
 
@@ -68,12 +69,12 @@ export default function Categories() {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/api/categories');
+      const response = await api.get('/api/categories', { params: { include_all: false } });
       const cats = response.data || [];
       
-      // Try to enrich with prompt counts if stats API is available
+      // Enrich with prompt counts if stats API is available
       try {
-        const statsRes = await api.get('/api/admin/stats');
+        const statsRes = await api.get('/api/admin/stats', { params: { include_all: false } });
         const statsMap = {};
         (statsRes.data?.category_stats || []).forEach((s) => {
           statsMap[s.id] = s.prompt_count;
@@ -179,90 +180,175 @@ export default function Categories() {
   const totalPromptsCount = categories.reduce((sum, c) => sum + (c.prompt_count || 0), 0);
 
   return (
-    <Box sx={{ maxWidth: 960, mx: 'auto' }}>
-      {/* Header & Main Actions */}
+    <Box sx={{ maxWidth: 1040, mx: 'auto', pb: 6 }}>
+      {/* Page Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
-        <Box display="flex" alignItems="center" gap={1.5}>
-          <Typography variant="h5" fontWeight="bold">
-            Manage Categories
+        <Box>
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 800,
+                color: '#0f172a',
+                letterSpacing: '-0.02em',
+                fontSize: { xs: '1.25rem', sm: '1.5rem' }
+              }}
+            >
+              Categories Management
+            </Typography>
+            <Tooltip title="Refresh categories">
+              <IconButton
+                size="small"
+                onClick={fetchCategories}
+                sx={{
+                  bgcolor: '#ffffff',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  border: '1px solid #e2e8f0',
+                  color: 'primary.main',
+                  '&:hover': { bgcolor: '#f1f5f9' }
+                }}
+              >
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Create, rename, and organize image prompt categories
           </Typography>
-          <Tooltip title="Refresh categories">
-            <IconButton size="small" onClick={fetchCategories} color="primary">
-              <RefreshIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
         </Box>
       </Box>
 
       {/* Summary Stat Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={4}>
-          <Paper sx={{ p: 2, borderRadius: 2.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #9c27b0', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-            <Box sx={{ bgcolor: 'rgba(156, 39, 176, 0.1)', p: 1, borderRadius: 2, display: 'flex' }}>
-              <CategoryIcon sx={{ color: '#9c27b0' }} />
-            </Box>
-            <Box>
-              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
-                {categories.length}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Total Categories
-              </Typography>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2.2,
+              borderRadius: '16px',
+              border: '1px solid rgba(226, 232, 240, 0.8)',
+              bgcolor: '#ffffff',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 16px rgba(139, 92, 246, 0.08)',
+                borderColor: 'rgba(139, 92, 246, 0.3)'
+              }
+            }}
+          >
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.68rem' }}>
+                  Total Categories
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: '#8b5cf6', mt: 0.5, lineHeight: 1.2 }}>
+                  {categories.length}
+                </Typography>
+              </Box>
+              <Box sx={{ bgcolor: 'rgba(139, 92, 246, 0.08)', color: '#8b5cf6', p: 1.2, borderRadius: '12px', display: 'flex' }}>
+                <CategoryIcon sx={{ fontSize: 22 }} />
+              </Box>
             </Box>
           </Paper>
         </Grid>
+
         <Grid item xs={12} sm={4}>
-          <Paper sx={{ p: 2, borderRadius: 2.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #1976d2', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-            <Box sx={{ bgcolor: 'rgba(25, 118, 210, 0.1)', p: 1, borderRadius: 2, display: 'flex' }}>
-              <CollectionsIcon sx={{ color: '#1976d2' }} />
-            </Box>
-            <Box>
-              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
-                {totalPromptsCount}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Total Prompts Linked
-              </Typography>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2.2,
+              borderRadius: '16px',
+              border: '1px solid rgba(226, 232, 240, 0.8)',
+              bgcolor: '#ffffff',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 16px rgba(79, 70, 229, 0.08)',
+                borderColor: 'rgba(79, 70, 229, 0.3)'
+              }
+            }}
+          >
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.68rem' }}>
+                  Total Linked Prompts
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: '#4f46e5', mt: 0.5, lineHeight: 1.2 }}>
+                  {totalPromptsCount}
+                </Typography>
+              </Box>
+              <Box sx={{ bgcolor: 'rgba(79, 70, 229, 0.08)', color: '#4f46e5', p: 1.2, borderRadius: '12px', display: 'flex' }}>
+                <CollectionsIcon sx={{ fontSize: 22 }} />
+              </Box>
             </Box>
           </Paper>
         </Grid>
+
         <Grid item xs={12} sm={4}>
-          <Paper sx={{ p: 2, borderRadius: 2.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #4caf50', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-            <Box sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)', p: 1, borderRadius: 2, display: 'flex' }}>
-              <CollectionsIcon sx={{ color: '#4caf50' }} />
-            </Box>
-            <Box>
-              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
-                {categories.length > 0 ? (totalPromptsCount / categories.length).toFixed(1) : 0}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Avg Prompts / Category
-              </Typography>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2.2,
+              borderRadius: '16px',
+              border: '1px solid rgba(226, 232, 240, 0.8)',
+              bgcolor: '#ffffff',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 16px rgba(16, 185, 129, 0.08)',
+                borderColor: 'rgba(16, 185, 129, 0.3)'
+              }
+            }}
+          >
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.68rem' }}>
+                  Avg Prompts / Category
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: '#10b981', mt: 0.5, lineHeight: 1.2 }}>
+                  {categories.length > 0 ? (totalPromptsCount / categories.length).toFixed(1) : 0}
+                </Typography>
+              </Box>
+              <Box sx={{ bgcolor: 'rgba(16, 185, 129, 0.08)', color: '#10b981', p: 1.2, borderRadius: '12px', display: 'flex' }}>
+                <FolderIcon sx={{ fontSize: 22 }} />
+              </Box>
             </Box>
           </Paper>
         </Grid>
       </Grid>
 
-      {/* Horizontal Categories with Image Counts Bar */}
+      {/* Horizontal Category Badges Bar with Name & Count in Row */}
       <Paper
+        elevation={0}
         sx={{
           p: 2,
           mb: 3,
-          borderRadius: 2.5,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-          background: '#ffffff',
+          borderRadius: '16px',
+          border: '1px solid rgba(226, 232, 240, 0.8)',
+          bgcolor: '#ffffff',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
         }}
       >
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <CategoryIcon color="primary" fontSize="small" />
-            <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
-              Category Image Counts
+          <Box display="flex" alignItems="center" gap={1.2}>
+            <CategoryIcon color="primary" sx={{ fontSize: 20 }} />
+            <Typography variant="subtitle1" fontWeight="700" sx={{ color: '#0f172a', fontSize: '0.95rem' }}>
+              Categories & Image Counts
             </Typography>
             <Chip
-              label={`${categories.length} Categories • ${totalPromptsCount} Total Images`}
+              label={`${categories.length} Categories • ${totalPromptsCount} Images`}
               size="small"
-              sx={{ height: 22, fontSize: '0.75rem', fontWeight: 600, bgcolor: 'rgba(25, 118, 210, 0.08)', color: '#1976d2' }}
+              sx={{
+                height: 22,
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                bgcolor: 'rgba(79, 70, 229, 0.08)',
+                color: '#4f46e5',
+                borderRadius: '6px'
+              }}
             />
           </Box>
         </Box>
@@ -270,15 +356,18 @@ export default function Categories() {
         <Box
           sx={{
             display: 'flex',
-            gap: 1.5,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 1.2,
             overflowX: 'auto',
             pb: 1,
-            pt: 0.5,
+            pt: 0.3,
+            whiteSpace: 'nowrap',
             '::-webkit-scrollbar': {
               height: 6,
             },
             '::-webkit-scrollbar-track': {
-              background: '#f1f5f9',
+              background: '#f8fafc',
               borderRadius: 3,
             },
             '::-webkit-scrollbar-thumb': {
@@ -304,46 +393,55 @@ export default function Categories() {
                   }
                   setPage(1);
                 }}
-                color={isMatch ? 'primary' : 'default'}
-                variant={isMatch ? 'filled' : 'outlined'}
                 label={
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Typography variant="body2" fontWeight={isMatch ? 'bold' : 'medium'}>
+                  <Box sx={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 1 }}>
+                    <Typography component="span" sx={{ fontWeight: isMatch ? 700 : 500, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                       {cat.name}
                     </Typography>
                     <Box
+                      component="span"
                       sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         bgcolor: isMatch
-                          ? 'rgba(255, 255, 255, 0.28)'
+                          ? 'rgba(255, 255, 255, 0.3)'
                           : (cat.prompt_count || 0) > 0
-                          ? 'rgba(25, 118, 210, 0.1)'
-                          : 'rgba(0, 0, 0, 0.06)',
+                          ? 'rgba(79, 70, 229, 0.08)'
+                          : '#f1f5f9',
                         color: isMatch
-                          ? '#fff'
+                          ? '#ffffff'
                           : (cat.prompt_count || 0) > 0
-                          ? '#1976d2'
-                          : 'text.secondary',
+                          ? '#4f46e5'
+                          : '#94a3b8',
                         px: 1,
                         py: 0.2,
-                        borderRadius: 10,
-                        fontSize: '0.75rem',
-                        fontWeight: 'bold',
+                        borderRadius: '12px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        minWidth: 22,
+                        textAlign: 'center'
                       }}
                     >
-                      {cat.prompt_count || 0} {(cat.prompt_count || 0) === 1 ? 'image' : 'images'}
+                      {cat.prompt_count || 0}
                     </Box>
                   </Box>
                 }
                 sx={{
                   py: 2.2,
-                  px: 0.5,
-                  borderRadius: 3,
-                  borderColor: isMatch ? 'primary.main' : '#e2e8f0',
+                  px: 1,
+                  borderRadius: '12px',
+                  border: '1.5px solid',
+                  borderColor: isMatch ? '#4f46e5' : '#e2e8f0',
+                  bgcolor: isMatch ? '#4f46e5' : '#ffffff',
+                  color: isMatch ? '#ffffff' : '#1e293b',
                   flexShrink: 0,
-                  transition: 'all 0.2s',
+                  boxShadow: isMatch ? '0 4px 12px rgba(79, 70, 229, 0.25)' : 'none',
+                  transition: 'all 0.15s ease-in-out',
                   '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+                    bgcolor: isMatch ? '#4338ca' : '#f8fafc',
+                    borderColor: isMatch ? '#4338ca' : '#cbd5e1',
+                    transform: 'translateY(-1px)'
                   },
                 }}
               />
@@ -352,32 +450,61 @@ export default function Categories() {
         </Box>
       </Paper>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2.5, borderRadius: '12px' }}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px' }}>{success}</Alert>}
 
       {/* Add New Category Box */}
-      <Paper sx={{ p: 2.5, mb: 3, borderRadius: 2.5, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          Add New Category
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2.5,
+          mb: 3,
+          borderRadius: '16px',
+          border: '1px solid rgba(226, 232, 240, 0.8)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+          bgcolor: '#ffffff'
+        }}
+      >
+        <Typography variant="subtitle1" fontWeight="bold" sx={{ color: '#0f172a' }}>
+          Create New Category
         </Typography>
-        <Box component="form" onSubmit={handleAddCategory} sx={{ display: 'flex', gap: 2, mt: 1 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Add a new category name to categorize image generation prompts
+        </Typography>
+        <Box component="form" onSubmit={handleAddCategory} sx={{ display: 'flex', gap: 1.5 }}>
           <TextField
             label="Category Name"
             variant="outlined"
             size="small"
             fullWidth
-            placeholder="e.g. Cyberpunk, Anime, Cinematic..."
+            placeholder="e.g. Cyberpunk, Anime, Cinematic, 3D Render..."
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
           />
-          <Button type="submit" variant="contained" color="primary" startIcon={<AddIcon />} sx={{ px: 3 }}>
-            Add
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            sx={{ px: 3, flexShrink: 0, borderRadius: '10px' }}
+          >
+            Add Category
           </Button>
         </Box>
       </Paper>
 
       {/* Search & Items Per Page Controls */}
-      <Paper sx={{ p: 2, mb: 2, borderRadius: 2.5, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 2.5,
+          borderRadius: '16px',
+          border: '1px solid rgba(226, 232, 240, 0.8)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+          bgcolor: '#ffffff'
+        }}
+      >
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={8}>
             <TextField
@@ -390,11 +517,11 @@ export default function Categories() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search by category name..."
+              placeholder="Search category name..."
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon />
+                    <SearchIcon color="action" fontSize="small" />
                   </InputAdornment>
                 ),
                 endAdornment: search ? (
@@ -410,7 +537,7 @@ export default function Categories() {
           <Grid item xs={12} sm={4}>
             <TextField
               select
-              label="Items per Page"
+              label="Items per page"
               variant="outlined"
               size="small"
               fullWidth
@@ -420,37 +547,37 @@ export default function Categories() {
                 setPage(1);
               }}
             >
-              <MenuItem value={5}>5 items / page</MenuItem>
-              <MenuItem value={10}>10 items / page</MenuItem>
-              <MenuItem value={25}>25 items / page</MenuItem>
-              <MenuItem value={50}>50 items / page</MenuItem>
-              <MenuItem value={100}>All (100) / page</MenuItem>
+              <MenuItem value={5}>5 / page</MenuItem>
+              <MenuItem value={10}>10 / page</MenuItem>
+              <MenuItem value={25}>25 / page</MenuItem>
+              <MenuItem value={50}>50 / page</MenuItem>
+              <MenuItem value={100}>100 / page</MenuItem>
             </TextField>
           </Grid>
         </Grid>
       </Paper>
 
-      {/* Category Table */}
+      {/* Category Table with Name & Count in Row */}
       {loading ? (
-        <Box display="flex" justifyContent="center" my={6}>
-          <CircularProgress />
+        <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" my={8} gap={2}>
+          <CircularProgress color="primary" />
+          <Typography variant="body2" color="text.secondary">Loading categories...</Typography>
         </Box>
       ) : (
-        <Paper sx={{ borderRadius: 2.5, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+        <Paper elevation={0} sx={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(226, 232, 240, 0.8)', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <TableContainer>
             <Table>
               <TableHead sx={{ backgroundColor: '#f8fafc' }}>
                 <TableRow>
-                  <TableCell width="80"><strong>ID</strong></TableCell>
-                  <TableCell><strong>Category Name</strong></TableCell>
-                  <TableCell align="center"><strong>Linked Prompts</strong></TableCell>
+                  <TableCell width="90"><strong>ID</strong></TableCell>
+                  <TableCell><strong>Category Name & Linked Prompts</strong></TableCell>
                   <TableCell align="right"><strong>Actions</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {displayedCategories.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={3} align="center" sx={{ py: 6 }}>
                       <Typography color="text.secondary">
                         {search ? 'No categories found matching your search.' : 'No categories found.'}
                       </Typography>
@@ -458,36 +585,44 @@ export default function Categories() {
                   </TableRow>
                 ) : (
                   displayedCategories.map((cat) => (
-                    <TableRow key={cat.id} hover>
-                      <TableCell sx={{ color: 'text.secondary', fontWeight: 500 }}>#{cat.id}</TableCell>
-                      <TableCell sx={{ fontWeight: 600, fontSize: '1rem' }}>
-                        {cat.name}
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={`${cat.prompt_count || 0} prompts`}
-                          size="small"
-                          color={cat.prompt_count > 0 ? "primary" : "default"}
-                          variant={cat.prompt_count > 0 ? "filled" : "outlined"}
-                          sx={{ fontWeight: 'bold' }}
-                        />
+                    <TableRow key={cat.id} hover sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
+                      <TableCell sx={{ color: '#94a3b8', fontWeight: 600 }}>#{cat.id}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 1.5 }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>
+                            {cat.name}
+                          </Typography>
+                          <Chip
+                            label={`${cat.prompt_count || 0} images`}
+                            size="small"
+                            sx={{
+                              fontWeight: 700,
+                              bgcolor: (cat.prompt_count || 0) > 0 ? 'rgba(79, 70, 229, 0.08)' : '#f1f5f9',
+                              color: (cat.prompt_count || 0) > 0 ? '#4f46e5' : '#94a3b8',
+                              borderRadius: '6px',
+                              height: 22,
+                              fontSize: '0.75rem'
+                            }}
+                          />
+                        </Box>
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title="Edit Category">
                           <IconButton
                             color="primary"
                             onClick={() => handleEditClick(cat)}
-                            sx={{ mr: 1 }}
+                            sx={{ mr: 1, '&:hover': { bgcolor: 'rgba(79, 70, 229, 0.1)' } }}
                           >
-                            <EditIcon />
+                            <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Delete Category">
                           <IconButton
                             color="error"
                             onClick={() => handleDeleteClick(cat.id)}
+                            sx={{ '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1)' } }}
                           >
-                            <DeleteIcon />
+                            <DeleteIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                       </TableCell>
@@ -507,6 +642,7 @@ export default function Categories() {
             borderTop="1px solid #f1f5f9"
             flexWrap="wrap"
             gap={2}
+            bgcolor="#fafafa"
           >
             <Typography variant="body2" color="text.secondary">
               Showing <strong>{totalItems > 0 ? startIndex + 1 : 0}</strong>–<strong>{Math.min(startIndex + rowsPerPage, totalItems)}</strong> of <strong>{totalItems}</strong> categories
@@ -517,12 +653,13 @@ export default function Categories() {
               page={page}
               onChange={(e, val) => setPage(val)}
               color="primary"
+              shape="rounded"
               showFirstButton
               showLastButton
             />
 
             <Box display="flex" alignItems="center" gap={1}>
-              <Typography variant="caption" color="text.secondary">Per page:</Typography>
+              <Typography variant="caption" color="text.secondary" fontWeight="600">Per page:</Typography>
               <TextField
                 select
                 size="small"
@@ -568,7 +705,7 @@ export default function Categories() {
               required
             />
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
             <Button
               onClick={() => setOpenEditDialog(false)}
               disabled={isSubmittingEdit}
@@ -590,16 +727,16 @@ export default function Categories() {
 
       {/* Confirmation Dialog for Delete */}
       <Dialog open={openConfirm} onClose={() => setOpenConfirm(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogTitle fontWeight="bold">Confirm Delete</DialogTitle>
         <DialogContent>
           <DialogContentText>
             Are you sure you want to delete this category? Any prompts belonging to this category might be affected.
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={() => setOpenConfirm(false)}>Cancel</Button>
-          <Button onClick={confirmDeleteCategory} color="error" autoFocus>
-            Delete
+          <Button onClick={confirmDeleteCategory} color="error" variant="contained" autoFocus>
+            Delete Category
           </Button>
         </DialogActions>
       </Dialog>
