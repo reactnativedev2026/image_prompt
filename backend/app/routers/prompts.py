@@ -28,7 +28,7 @@ def get_prompts(
     order: str = Query("random", description="Ordering: 'random', 'latest', 'oldest', 'popular'"),
     include_all: bool = Query(False, description="Include all prompts including inactive S3"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
-    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    limit: int = Query(20, ge=1, le=500, description="Items per page"),
     db: Session = Depends(get_db)
 ):
     # Disable client/proxy caching so every pull/refresh returns freshly randomized data
@@ -50,6 +50,11 @@ def get_prompts(
         
     if search:
         query = query.filter(Prompt.prompt_text.ilike(f"%{search}%"))
+
+    # Compute total count for pagination and count badges
+    total_count = query.count()
+    response.headers["X-Total-Count"] = str(total_count)
+    response.headers["Access-Control-Expose-Headers"] = "X-Total-Count, x-total-count"
         
     # Apply Ordering: Default is random shuffle
     if order == "random":

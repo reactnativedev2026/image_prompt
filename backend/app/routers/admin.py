@@ -1,12 +1,13 @@
 import re
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.config import settings
 from app.models import Admin, Category, Prompt
 from app.schemas.models_schema import (
     AdminRegisterRequest, AdminLoginRequest, TokenResponse,
-    CategoryCreateRequest, CategoryResponse,
+    CategoryCreateRequest, CategoryUpdateRequest, CategoryResponse,
     PromptCreateRequest, PromptResponse, PromptUpdateRequest
 )
 from app.routers.auth_utils import hash_password, verify_password, create_access_token, get_current_admin
@@ -16,6 +17,45 @@ router = APIRouter(
     prefix="/api/admin",
     tags=["admin-auth"]
 )
+
+# ── Overall Admin Stats API ──
+@router.get("/stats", status_code=status.HTTP_200_OK)
+def get_admin_stats(
+    db: Session = Depends(get_db),
+    current_admin: str = Depends(get_current_admin)
+):
+    total_prompts = db.query(Prompt).count()
+    trending_prompts = db.query(Prompt).filter(Prompt.is_trending == True).count()
+    total_categories = db.query(Category).count()
+    total_views = db.query(func.coalesce(func.sum(Prompt.view_count), 0)).scalar() or 0
+    
+    # Category with prompt counts
+    category_counts = (
+        db.query(
+            Category.id,
+            Category.name,
+            func.count(Prompt.id).label("prompt_count")
+        )
+        .outerjoin(Prompt, Category.id == Prompt.category_id)
+        .group_by(Category.id, Category.name)
+        .order_by(Category.name.asc())
+        .all()
+    )
+    
+    categories_data = [
+        {"id": c.id, "name": c.name, "prompt_count": c.prompt_count}
+        for c in category_counts
+    ]
+    
+    return {
+        "total_prompts": total_prompts,
+        "trending_prompts": trending_prompts,
+        "regular_prompts": total_prompts - trending_prompts,
+        "total_categories": total_categories,
+        "total_views": int(total_views),
+        "category_stats": categories_data
+    }
+
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register_admin(payload: AdminRegisterRequest, db: Session = Depends(get_db)):
@@ -81,23 +121,87 @@ def upload_image_endpoint(
 
 
 # ── Category Management (Admin only) ──
+@router.get("/categories", status_code=status.HTTP_200_OK)
+def get_admin_categories(
+    db: Session = Depends(get_db),
+    current_admin: str = Depends(get_current_admin)
+):
+    category_counts = (
+        db.query(
+            Category.id,
+            Category.name,
+            Category.created_at,
+            func.count(Prompt.id).label("prompt_count")
+        )
+        .outerjoin(Prompt, Category.id == Prompt.category_id)
+        .group_by(Category.id, Category.name, Category.created_at)
+        .order_by(Category.id.asc())
+        .all()
+    )
+    return [
+        {
+            "id": c.id,
+            "name": c.name,
+            "created_at": c.created_at,
+            "prompt_count": c.prompt_count
+        }
+        for c in category_counts
+    ]
+
+
 @router.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
 def create_category(
     payload: CategoryCreateRequest,
     db: Session = Depends(get_db),
     current_admin: str = Depends(get_current_admin)
 ):
-    existing = db.query(Category).filter(Category.name == payload.name).first()
+    clean_name = payload.name.strip()
+    existing = db.query(Category).filter(Category.name.ilike(clean_name)).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Category already exists"
         )
-    new_cat = Category(name=payload.name)
+    new_cat = Category(name=clean_name)
     db.add(new_cat)
     db.commit()
     db.refresh(new_cat)
     return new_cat
+
+
+@router.put("/categories/{id}", response_model=CategoryResponse)
+@router.patch("/categories/{id}", response_model=CategoryResponse)
+def update_category(
+    id: int,
+    payload: CategoryUpdateRequest,
+    db: Session = Depends(get_db),
+    current_admin: str = Depends(get_current_admin)
+):
+    cat = db.query(Category).filter(Category.id == id).first()
+    if not cat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
+    
+    clean_name = payload.name.strip()
+    if not clean_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Category name cannot be empty"
+        )
+        
+    existing = db.query(Category).filter(Category.name.ilike(clean_name), Category.id != id).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Category with this name already exists"
+        )
+    
+    cat.name = clean_name
+    db.commit()
+    db.refresh(cat)
+    return cat
 
 
 @router.delete("/categories/{id}", status_code=status.HTTP_200_OK)

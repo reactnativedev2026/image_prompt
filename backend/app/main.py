@@ -28,13 +28,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware config to allow React Native connections
+# CORS middleware config to allow React Native and Admin connections
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Mount local media backup directory for static direct access

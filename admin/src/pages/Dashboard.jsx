@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -15,7 +15,8 @@ import {
   ListItemIcon,
   ListItemText,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Chip
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -23,15 +24,33 @@ import {
   Image as ImageIcon,
   Logout as LogoutIcon
 } from '@mui/icons-material';
+import api from '../api';
 
 const drawerWidth = 240;
 
 export default function Dashboard() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [stats, setStats] = useState({ total_prompts: 0, total_categories: 0 });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    fetchStats();
+  }, [location.pathname]);
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.get('/api/admin/stats');
+      setStats({
+        total_prompts: response.data.total_prompts || 0,
+        total_categories: response.data.total_categories || 0
+      });
+    } catch (err) {
+      // Quiet fail if not logged in or network error
+    }
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -43,8 +62,8 @@ export default function Dashboard() {
   };
 
   const menuItems = [
-    { text: 'Prompts', icon: <ImageIcon />, path: '/' },
-    { text: 'Categories', icon: <CategoryIcon />, path: '/categories' },
+    { text: 'Prompts', icon: <ImageIcon />, path: '/', count: stats.total_prompts },
+    { text: 'Categories', icon: <CategoryIcon />, path: '/categories', count: stats.total_categories },
   ];
 
   const drawerContent = (
@@ -78,6 +97,19 @@ export default function Dashboard() {
                 {item.icon}
               </ListItemIcon>
               <ListItemText primary={item.text} />
+              {item.count > 0 && (
+                <Chip
+                  label={item.count}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.72rem',
+                    fontWeight: 'bold',
+                    bgcolor: location.pathname === item.path ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)',
+                    color: location.pathname === item.path ? '#fff' : 'text.secondary'
+                  }}
+                />
+              )}
             </ListItemButton>
           </ListItem>
         ))}

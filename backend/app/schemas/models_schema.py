@@ -15,6 +15,9 @@ class TokenResponse(BaseModel):
 class CategoryCreateRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=50)
 
+class CategoryUpdateRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=50)
+
 class CategoryResponse(BaseModel):
     id: int
     name: str

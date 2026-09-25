@@ -35,26 +35,40 @@ import {
   CloudUpload as CloudUploadIcon,
   ContentCopy as ContentCopyIcon,
   Visibility as VisibilityIcon,
-  Whatshot as TrendingIcon
+  Whatshot as TrendingIcon,
+  Category as CategoryIcon,
+  PhotoLibrary as ImageIcon,
+  Collections as CollectionsIcon,
+  Clear as ClearIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import api, { getErrorMessage } from '../api';
 
 export default function Prompts() {
   const [prompts, setPrompts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [stats, setStats] = useState({
+    total_prompts: 0,
+    trending_prompts: 0,
+    regular_prompts: 0,
+    total_categories: 0,
+    total_views: 0,
+    category_stats: []
+  });
   const [loading, setLoading] = useState(false);
   const [globalLoading, setGlobalLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Filtering states
+  // Filtering & Pagination states
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [filterTrending, setFilterTrending] = useState('');
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(12);
   const [totalPages, setTotalPages] = useState(1);
-  const limit = 12;
+  const [totalCount, setTotalCount] = useState(0);
 
   // Dialog / Modal Form states
   const [openDialog, setOpenDialog] = useState(false);
@@ -75,16 +89,26 @@ export default function Prompts() {
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
   useEffect(() => {
+    fetchStats();
     fetchCategories();
   }, []);
 
   useEffect(() => {
     fetchPrompts();
-  }, [page, selectedCategory, search, filterTrending]);
+  }, [page, limit, selectedCategory, search, filterTrending]);
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.get('/api/admin/stats');
+      setStats(response.data);
+    } catch (err) {
+      console.error('Failed to fetch stats', err);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get('/api/categories');
+      const response = await api.get('/api/admin/categories');
       setCategories(response.data);
     } catch (err) {
       console.error('Failed to fetch categories', err);
@@ -106,16 +130,22 @@ export default function Prompts() {
       };
       const response = await api.get('/api/prompts', { params });
       setPrompts(response.data);
-      if (response.data.length === limit) {
-        setTotalPages(page + 1);
-      } else {
-        setTotalPages(page);
-      }
+
+      const countHeader = response.headers['x-total-count'];
+      const count = countHeader !== undefined ? parseInt(countHeader, 10) : response.data.length;
+      setTotalCount(count);
+      setTotalPages(Math.max(1, Math.ceil(count / limit)));
     } catch (err) {
       setError('Failed to fetch prompts.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefreshAll = () => {
+    fetchStats();
+    fetchCategories();
+    fetchPrompts();
   };
 
   const handleOpenAdd = () => {
@@ -129,7 +159,7 @@ export default function Prompts() {
   };
 
   const handleOpenEdit = (prompt, e) => {
-    e.stopPropagation(); // Prevent card click trigger
+    e.stopPropagation();
     setEditMode(true);
     setPromptText(prompt.prompt_text);
     setCategoryId(prompt.category_id);
@@ -203,6 +233,8 @@ export default function Prompts() {
       }
       setOpenDialog(false);
       fetchPrompts();
+      fetchStats();
+      fetchCategories();
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to save prompt.'));
     } finally {
@@ -223,13 +255,14 @@ export default function Prompts() {
           : 'Prompt removed from Trending.'
       );
       setSnackbarOpen(true);
+      fetchStats();
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update trending status.'));
     }
   };
 
   const handleDeletePrompt = async (id, e) => {
-    e.stopPropagation(); // Prevent card click trigger
+    e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this prompt?')) return;
     setError('');
     setSuccess('');
@@ -239,6 +272,8 @@ export default function Prompts() {
       await api.delete(`/api/admin/prompts/${id}`);
       setSuccess('Prompt deleted successfully!');
       fetchPrompts();
+      fetchStats();
+      fetchCategories();
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to delete prompt.'));
     } finally {
@@ -263,22 +298,280 @@ export default function Prompts() {
         <Typography variant="h6">{loadingMessage}</Typography>
       </Backdrop>
 
+      {/* Header & Main Actions */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
-        <Typography variant="h5" fontWeight="bold">
-          Manage Prompts
-        </Typography>
-        <Button variant="contained" color="primary" onClick={handleOpenAdd}>
+        <Box display="flex" alignItems="center" gap={1.5}>
+          <Typography variant="h5" fontWeight="bold">
+            Manage Prompts
+          </Typography>
+          <Tooltip title="Refresh all data & counts">
+            <IconButton size="small" onClick={handleRefreshAll} color="primary">
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        <Button variant="contained" color="primary" onClick={handleOpenAdd} startIcon={<ImageIcon />}>
           Add New Prompt
         </Button>
       </Box>
 
+      {/* Overall Counts / Statistics Cards */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={6} sm={4} md={2.4}>
+          <Paper sx={{ p: 2, borderRadius: 2.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #1976d2', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+            <Box sx={{ bgcolor: 'rgba(25, 118, 210, 0.1)', p: 1, borderRadius: 2, display: 'flex' }}>
+              <ImageIcon sx={{ color: '#1976d2' }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                {stats.total_prompts}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Total Prompts
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} sm={4} md={2.4}>
+          <Paper sx={{ p: 2, borderRadius: 2.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #ff5722', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+            <Box sx={{ bgcolor: 'rgba(255, 87, 34, 0.1)', p: 1, borderRadius: 2, display: 'flex' }}>
+              <TrendingIcon sx={{ color: '#ff5722' }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                {stats.trending_prompts}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                🔥 Trending
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} sm={4} md={2.4}>
+          <Paper sx={{ p: 2, borderRadius: 2.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #4caf50', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+            <Box sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)', p: 1, borderRadius: 2, display: 'flex' }}>
+              <CollectionsIcon sx={{ color: '#4caf50' }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                {stats.regular_prompts}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Regular Prompts
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} sm={4} md={2.4}>
+          <Paper sx={{ p: 2, borderRadius: 2.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #9c27b0', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+            <Box sx={{ bgcolor: 'rgba(156, 39, 176, 0.1)', p: 1, borderRadius: 2, display: 'flex' }}>
+              <CategoryIcon sx={{ color: '#9c27b0' }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                {stats.total_categories}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Categories
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={4} md={2.4}>
+          <Paper sx={{ p: 2, borderRadius: 2.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #ed6c02', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+            <Box sx={{ bgcolor: 'rgba(237, 108, 2, 0.1)', p: 1, borderRadius: 2, display: 'flex' }}>
+              <VisibilityIcon sx={{ color: '#ed6c02' }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                {stats.total_views ? stats.total_views.toLocaleString() : 0}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Total Views
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Horizontal Categories with Image Counts Bar */}
+      <Paper
+        sx={{
+          p: 2,
+          mb: 3,
+          borderRadius: 2.5,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+          background: '#ffffff',
+        }}
+      >
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5} flexWrap="wrap" gap={1}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <CategoryIcon color="primary" fontSize="small" />
+            <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
+              Category Image Counts
+            </Typography>
+            <Chip
+              label={`${categories.length} Categories`}
+              size="small"
+              sx={{ height: 22, fontSize: '0.75rem', fontWeight: 600, bgcolor: 'rgba(25, 118, 210, 0.08)', color: '#1976d2' }}
+            />
+          </Box>
+          {selectedCategory && (
+            <Button
+              size="small"
+              variant="text"
+              onClick={() => {
+                setSelectedCategory('');
+                setPage(1);
+              }}
+              sx={{ textTransform: 'none', fontSize: '0.8rem', py: 0 }}
+            >
+              Show All ({stats.total_prompts} images)
+            </Button>
+          )}
+        </Box>
+
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 1.5,
+            overflowX: 'auto',
+            pb: 1,
+            pt: 0.5,
+            '::-webkit-scrollbar': {
+              height: 6,
+            },
+            '::-webkit-scrollbar-track': {
+              background: '#f1f5f9',
+              borderRadius: 3,
+            },
+            '::-webkit-scrollbar-thumb': {
+              background: '#cbd5e1',
+              borderRadius: 3,
+              '&:hover': {
+                background: '#94a3b8',
+              },
+            },
+          }}
+        >
+          {/* "All Categories" Pill */}
+          <Chip
+            clickable
+            onClick={() => {
+              setSelectedCategory('');
+              setPage(1);
+            }}
+            color={selectedCategory === '' ? 'primary' : 'default'}
+            variant={selectedCategory === '' ? 'filled' : 'outlined'}
+            label={
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="body2" fontWeight={selectedCategory === '' ? 'bold' : 'medium'}>
+                  All Categories
+                </Typography>
+                <Box
+                  sx={{
+                    bgcolor: selectedCategory === '' ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.08)',
+                    color: selectedCategory === '' ? '#fff' : 'text.primary',
+                    px: 1,
+                    py: 0.2,
+                    borderRadius: 10,
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {stats.total_prompts} images
+                </Box>
+              </Box>
+            }
+            sx={{
+              py: 2.2,
+              px: 0.5,
+              borderRadius: 3,
+              borderColor: selectedCategory === '' ? 'primary.main' : '#e2e8f0',
+              flexShrink: 0,
+              transition: 'all 0.2s',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+              },
+            }}
+          />
+
+          {/* Individual Category Pills with Image Counts */}
+          {categories.map((cat) => {
+            const isSelected = String(selectedCategory) === String(cat.id);
+            const imageCount =
+              cat.prompt_count !== undefined
+                ? cat.prompt_count
+                : stats.category_stats?.find((c) => c.id === cat.id)?.prompt_count || 0;
+
+            return (
+              <Chip
+                key={cat.id}
+                clickable
+                onClick={() => {
+                  if (isSelected) {
+                    setSelectedCategory('');
+                  } else {
+                    setSelectedCategory(cat.id);
+                  }
+                  setPage(1);
+                }}
+                color={isSelected ? 'primary' : 'default'}
+                variant={isSelected ? 'filled' : 'outlined'}
+                label={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Typography variant="body2" fontWeight={isSelected ? 'bold' : 'medium'}>
+                      {cat.name}
+                    </Typography>
+                    <Box
+                      sx={{
+                        bgcolor: isSelected
+                          ? 'rgba(255, 255, 255, 0.28)'
+                          : imageCount > 0
+                          ? 'rgba(25, 118, 210, 0.1)'
+                          : 'rgba(0, 0, 0, 0.06)',
+                        color: isSelected
+                          ? '#fff'
+                          : imageCount > 0
+                          ? '#1976d2'
+                          : 'text.secondary',
+                        px: 1,
+                        py: 0.2,
+                        borderRadius: 10,
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {imageCount} {imageCount === 1 ? 'image' : 'images'}
+                    </Box>
+                  </Box>
+                }
+                sx={{
+                  py: 2.2,
+                  px: 0.5,
+                  borderRadius: 3,
+                  borderColor: isSelected ? 'primary.main' : '#e2e8f0',
+                  flexShrink: 0,
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+                  },
+                }}
+              />
+            );
+          })}
+        </Box>
+      </Paper>
+
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
-      {/* Filter and Search Bar */}
-      <Paper sx={{ p: 2, mb: 3 }}>
+      {/* Filter and Search Bar with Dynamic Items Per Page selector */}
+      <Paper sx={{ p: 2.5, mb: 3, borderRadius: 2.5, boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={6} md={3.5}>
             <TextField
               label="Search Prompts"
               variant="outlined"
@@ -289,16 +582,24 @@ export default function Prompts() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
+              placeholder="Search by text..."
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
                     <SearchIcon />
                   </InputAdornment>
                 ),
+                endAdornment: search ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => { setSearch(''); setPage(1); }}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null
               }}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={6} md={3}>
             <TextField
               select
               label="Filter by Category"
@@ -311,18 +612,24 @@ export default function Prompts() {
                 setPage(1);
               }}
             >
-              <MenuItem value="">All Categories</MenuItem>
-              {categories.map((cat) => (
-                <MenuItem key={cat.id} value={cat.id}>
-                  {cat.name}
-                </MenuItem>
-              ))}
+              <MenuItem value="">
+                All Categories ({stats.total_prompts})
+              </MenuItem>
+              {categories.map((cat) => {
+                const catStat = stats.category_stats?.find((c) => c.id === cat.id);
+                const countDisplay = catStat ? ` (${catStat.prompt_count})` : (cat.prompt_count !== undefined ? ` (${cat.prompt_count})` : '');
+                return (
+                  <MenuItem key={cat.id} value={cat.id}>
+                    {cat.name}{countDisplay}
+                  </MenuItem>
+                );
+              })}
             </TextField>
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={6} md={2.5}>
             <TextField
               select
-              label="Filter by Trending"
+              label="Filter by Status"
               variant="outlined"
               size="small"
               fullWidth
@@ -332,12 +639,57 @@ export default function Prompts() {
                 setPage(1);
               }}
             >
-              <MenuItem value="">All Statuses</MenuItem>
-              <MenuItem value="true">🔥 Trending Only</MenuItem>
-              <MenuItem value="false">Regular Only</MenuItem>
+              <MenuItem value="">All Statuses ({stats.total_prompts})</MenuItem>
+              <MenuItem value="true">🔥 Trending ({stats.trending_prompts})</MenuItem>
+              <MenuItem value="false">Regular ({stats.regular_prompts})</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              select
+              label="Items per Page (Limit)"
+              variant="outlined"
+              size="small"
+              fullWidth
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              <MenuItem value={12}>12 items / page</MenuItem>
+              <MenuItem value={24}>24 items / page</MenuItem>
+              <MenuItem value={48}>48 items / page</MenuItem>
+              <MenuItem value={96}>96 items / page</MenuItem>
+              <MenuItem value={200}>All (200) / page</MenuItem>
             </TextField>
           </Grid>
         </Grid>
+
+        {/* Count Summary & Active Filters Strip */}
+        <Box display="flex" justifyContent="space-between" alignItems="center" mt={2} pt={1.5} borderTop="1px solid #f1f5f9" flexWrap="wrap" gap={1}>
+          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+            <Typography variant="body2" color="text.secondary">
+              Showing <strong>{prompts.length > 0 ? (page - 1) * limit + 1 : 0}</strong>–<strong>{Math.min(page * limit, totalCount)}</strong> of <strong>{totalCount}</strong> matching prompts
+            </Typography>
+            {(search || selectedCategory || filterTrending !== '') && (
+              <Chip
+                label="Clear Filters"
+                size="small"
+                onDelete={() => {
+                  setSearch('');
+                  setSelectedCategory('');
+                  setFilterTrending('');
+                  setPage(1);
+                }}
+                color="default"
+              />
+            )}
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+          </Typography>
+        </Box>
       </Paper>
 
       {/* Prompts Grid */}
@@ -353,10 +705,24 @@ export default function Prompts() {
             gap: 3
           }}>
             {prompts.length === 0 ? (
-              <Box sx={{ gridColumn: '1 / -1', textAlign: 'center', py: 4 }}>
-                <Typography color="text.secondary">
+              <Box sx={{ gridColumn: '1 / -1', textAlign: 'center', py: 6 }}>
+                <Typography color="text.secondary" variant="h6">
                   No prompts found matching the criteria.
                 </Typography>
+                {(search || selectedCategory || filterTrending !== '') && (
+                  <Button
+                    variant="outlined"
+                    sx={{ mt: 2 }}
+                    onClick={() => {
+                      setSearch('');
+                      setSelectedCategory('');
+                      setFilterTrending('');
+                      setPage(1);
+                    }}
+                  >
+                    Reset All Filters
+                  </Button>
+                )}
               </Box>
             ) : (
               prompts.map((prompt) => (
@@ -441,14 +807,40 @@ export default function Prompts() {
             )}
           </Box>
 
-          {/* Pagination */}
-          <Box display="flex" justifyContent="center" mt={4}>
+          {/* Bottom Pagination & Per Page Selector */}
+          <Box display="flex" justifyContent="space-between" alignItems="center" mt={4} mb={2} flexWrap="wrap" gap={2}>
+            <Typography variant="body2" color="text.secondary">
+              Showing <strong>{prompts.length > 0 ? (page - 1) * limit + 1 : 0}</strong>–<strong>{Math.min(page * limit, totalCount)}</strong> of <strong>{totalCount}</strong> prompts
+            </Typography>
+
             <Pagination
               count={totalPages}
               page={page}
               onChange={(e, val) => setPage(val)}
               color="primary"
+              showFirstButton
+              showLastButton
             />
+
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography variant="caption" color="text.secondary">Items per page:</Typography>
+              <TextField
+                select
+                size="small"
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                sx={{ width: 110 }}
+              >
+                <MenuItem value={12}>12 / page</MenuItem>
+                <MenuItem value={24}>24 / page</MenuItem>
+                <MenuItem value={48}>48 / page</MenuItem>
+                <MenuItem value={96}>96 / page</MenuItem>
+                <MenuItem value={200}>200 / page</MenuItem>
+              </TextField>
+            </Box>
           </Box>
         </>
       )}
