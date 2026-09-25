@@ -12,10 +12,28 @@ router = APIRouter(
     tags=["app-prompts"]
 )
 
-# ── Fetch Categories (App view) ──
+# ── Fetch Categories (App & Admin view) ──
 @router.get("/categories", response_model=list[CategoryResponse])
 def get_categories(db: Session = Depends(get_db)):
-    return db.query(Category).all()
+    category_counts = (
+        db.query(
+            Category.id,
+            Category.name,
+            func.count(Prompt.id).label("prompt_count")
+        )
+        .outerjoin(Prompt, Category.id == Prompt.category_id)
+        .group_by(Category.id, Category.name)
+        .order_by(Category.name.asc())
+        .all()
+    )
+    return [
+        {
+            "id": c.id,
+            "name": c.name,
+            "prompt_count": c.prompt_count or 0
+        }
+        for c in category_counts
+    ]
 
 
 # ── Fetch Prompts with filters & search (App view) with Random / Ordered support ──

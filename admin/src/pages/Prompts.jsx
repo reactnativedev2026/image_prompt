@@ -100,16 +100,19 @@ export default function Prompts() {
   const fetchStats = async () => {
     try {
       const response = await api.get('/api/admin/stats');
-      setStats(response.data);
+      if (response.data) {
+        setStats(response.data);
+      }
     } catch (err) {
-      console.error('Failed to fetch stats', err);
+      // Quiet fail if remote server doesn't have stats endpoint yet
+      console.log('Stats API unavailable, using local calculation');
     }
   };
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get('/api/admin/categories');
-      setCategories(response.data);
+      const response = await api.get('/api/categories');
+      setCategories(response.data || []);
     } catch (err) {
       console.error('Failed to fetch categories', err);
     }

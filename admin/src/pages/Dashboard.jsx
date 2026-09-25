@@ -48,7 +48,13 @@ export default function Dashboard() {
         total_categories: response.data.total_categories || 0
       });
     } catch (err) {
-      // Quiet fail if not logged in or network error
+      try {
+        const catRes = await api.get('/api/categories');
+        setStats((prev) => ({
+          ...prev,
+          total_categories: (catRes.data || []).length
+        }));
+      } catch (catErr) {}
     }
   };
 

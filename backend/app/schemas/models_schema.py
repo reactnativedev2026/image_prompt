@@ -21,6 +21,7 @@ class CategoryUpdateRequest(BaseModel):
 class CategoryResponse(BaseModel):
     id: int
     name: str
+    prompt_count: int = 0
 
     class Config:
         from_attributes = True

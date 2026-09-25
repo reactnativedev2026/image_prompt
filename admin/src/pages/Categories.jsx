@@ -68,10 +68,32 @@ export default function Categories() {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/api/admin/categories');
-      setCategories(response.data);
+      const response = await api.get('/api/categories');
+      const cats = response.data || [];
+      
+      // Try to enrich with prompt counts if stats API is available
+      try {
+        const statsRes = await api.get('/api/admin/stats');
+        const statsMap = {};
+        (statsRes.data?.category_stats || []).forEach((s) => {
+          statsMap[s.id] = s.prompt_count;
+        });
+        setCategories(
+          cats.map((c) => ({
+            ...c,
+            prompt_count: c.prompt_count !== undefined && c.prompt_count !== 0 ? c.prompt_count : (statsMap[c.id] || 0)
+          }))
+        );
+      } catch (statsErr) {
+        setCategories(
+          cats.map((c) => ({
+            ...c,
+            prompt_count: c.prompt_count || 0
+          }))
+        );
+      }
     } catch (err) {
-      setError('Failed to fetch categories.');
+      setError(getErrorMessage(err, 'Failed to fetch categories.'));
     } finally {
       setLoading(false);
     }
