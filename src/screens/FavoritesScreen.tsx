@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { logScreenView } from '../utils/analytics';
+import FastImage from 'react-native-fast-image';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 40) / 3;
@@ -79,7 +80,15 @@ const AnimatedFavoriteCard = ({ item, index, navigation, toggleFavorite, favorit
         onPress={() => navigation.navigate('PromptDetail', { item, promptsList: favorites })}
         style={styles.cardInner}
       >
-        <Image source={{ uri: item.imageUrl }} style={styles.image} />
+        <FastImage
+          source={{
+            uri: item.imageUrl,
+            priority: FastImage.priority.normal,
+            cache: FastImage.cacheControl.immutable,
+          }}
+          style={styles.image}
+          resizeMode={FastImage.resizeMode.cover}
+        />
         {/* Top-Right Image Icon */}
         <View style={styles.imageIconBadge}>
           <Icon name="image" size={12} color="#FFF" />
@@ -93,7 +102,7 @@ const AnimatedFavoriteCard = ({ item, index, navigation, toggleFavorite, favorit
           <View style={styles.cardFooter}>
             <View style={styles.ratingWrap}>
               <Icon name="star" size={10} color="#FFB300" />
-              <Text style={styles.ratingText}>{meta.rating}</Text>
+              <Text style={styles.ratingText}>{item.score || 0}</Text>
             </View>
             <TouchableOpacity
               onPress={() => toggleFavorite(item)}

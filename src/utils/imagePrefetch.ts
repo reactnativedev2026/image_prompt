@@ -1,4 +1,4 @@
-import { Image } from 'react-native';
+import FastImage from 'react-native-fast-image';
 import { PromptItem } from '../data/mockPrompts';
 
 /**
@@ -10,11 +10,8 @@ export const prefetchImages = (urls: (string | undefined | null)[]): void => {
     (url): url is string => typeof url === 'string' && url.trim().startsWith('http')
   );
 
-  validUrls.forEach(url => {
-    Image.prefetch(url).catch(() => {
-      // Silently ignore prefetch failures (e.g. offline)
-    });
-  });
+  const preloads = validUrls.map(url => ({ uri: url }));
+  FastImage.preload(preloads);
 };
 
 /**

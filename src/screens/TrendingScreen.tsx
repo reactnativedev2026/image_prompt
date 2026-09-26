@@ -23,6 +23,7 @@ import { fetchCategories, fetchTrendingPrompts, ApiCategory } from '../utils/api
 import { logScreenView } from '../utils/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { prefetchPromptImages } from '../utils/imagePrefetch';
+import FastImage from 'react-native-fast-image';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 40) / 3;
@@ -95,10 +96,14 @@ const AnimatedTrendingCard = React.memo(({
         onPress={() => navigation.navigate('PromptDetail', { item, promptsList })}
         style={styles.cardInner}
       >
-        <Image
-          source={{ uri: item.imageUrl }}
+        <FastImage
+          source={{
+            uri: item.imageUrl,
+            priority: FastImage.priority.normal,
+            cache: FastImage.cacheControl.immutable,
+          }}
           style={styles.image}
-          fadeDuration={Platform.OS === 'android' ? 250 : 0}
+          resizeMode={FastImage.resizeMode.cover}
         />
         {/* Trending Fire Badge */}
         <View style={styles.fireBadge}>
@@ -110,7 +115,7 @@ const AnimatedTrendingCard = React.memo(({
           <View style={styles.cardFooter}>
             <View style={styles.ratingWrap}>
               <Icon name="star" size={10} color="#FFB300" />
-              <Text style={styles.ratingText}>{meta.rating}</Text>
+              <Text style={styles.ratingText}>{item.score || 0}</Text>
             </View>
             <TouchableOpacity
               onPress={() => toggleFavorite(item)}
@@ -139,6 +144,10 @@ export const TrendingScreen = () => {
   );
   const [loading, setLoading] = useState(preloadedTrending.length === 0);
   const [refreshing, setRefreshing] = useState(false);
+  const [categories, setCategories] = useState<string[]>(
+    preloadedCategories.length > 0 ? ['All', ...preloadedCategories.map(c => c.name)] : ['All']
+  );
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
@@ -155,6 +164,14 @@ export const TrendingScreen = () => {
   useEffect(() => {
     logScreenView('TrendingScreen');
   }, []);
+
+  useEffect(() => {
+    if (!isInitialMount.current) {
+      setPage(1);
+      setHasMore(true);
+      loadTrendingData(1, false);
+    }
+  }, [selectedCategory]);
 
   // Sync when preloadedTrending becomes available
   useEffect(() => {
@@ -182,10 +199,19 @@ export const TrendingScreen = () => {
     }
 
     try {
-      const [cats, trendingPts] = await Promise.all([
-        preloadedCategories.length > 0 ? Promise.resolve(preloadedCategories) : fetchCategories(),
-        fetchTrendingPrompts(undefined, pageNum, PAGE_LIMIT),
-      ]);
+      let cats = preloadedCategories;
+      if (cats.length === 0) {
+        cats = await fetchCategories();
+        setCategories(['All', ...cats.map(c => c.name)]);
+      }
+
+      let catId: number | undefined = undefined;
+      if (selectedCategory !== 'All') {
+        const found = cats.find(c => c.name.toLowerCase() === selectedCategory.toLowerCase());
+        if (found) catId = found.id;
+      }
+
+      const trendingPts = await fetchTrendingPrompts(catId, pageNum, PAGE_LIMIT);
 
       if (trendingPts && trendingPts.length > 0) {
         const mapped: PromptItem[] = trendingPts.map(p => {
@@ -196,6 +222,9 @@ export const TrendingScreen = () => {
             promptText: p.prompt_text,
             category: catObj ? catObj.name : 'Trending',
             viewCount: p.view_count || 0,
+            copyCount: p.copy_count || 0,
+            favoriteCount: p.favorite_count || 0,
+            score: p.score || 0,
             isTrending: true,
           };
         });
@@ -317,6 +346,39 @@ export const TrendingScreen = () => {
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      {/* ── Category Pills ── */}
+      <View style={styles.pillRowWrapper}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={categories}
+          keyExtractor={c => c}
+          contentContainerStyle={styles.pillRow}
+          renderItem={({ item }) => {
+            const active = selectedCategory === item;
+            if (active) {
+              return (
+                <TouchableOpacity activeOpacity={0.8} onPress={() => setSelectedCategory(item)}>
+                  <LinearGradient
+                    colors={['#FF6B00', '#FF3D00']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.pillActiveGradient}
+                  >
+                    <Text style={styles.pillTextActive}>{item}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            }
+            return (
+              <TouchableOpacity activeOpacity={0.8} style={styles.pill} onPress={() => setSelectedCategory(item)}>
+                <Text style={styles.pillText}>{item}</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
       </View>
 
       {/* 3-Column Grid */}
@@ -459,6 +521,41 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 14,
     paddingHorizontal: 8,
+  },
+  pillRowWrapper: {
+    marginBottom: 10,
+  },
+  pillRow: {
+    paddingHorizontal: 20,
+    paddingVertical: 2,
+    gap: 8,
+  },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#1E1E2E',
+    borderWidth: 1,
+    borderColor: '#2D2D44',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pillActiveGradient: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pillText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  pillTextActive: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   listContent: {
     paddingHorizontal: 15,

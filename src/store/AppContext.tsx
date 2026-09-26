@@ -68,6 +68,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             promptText: p.prompt_text,
             category: catObj ? catObj.name : 'Other',
             viewCount: p.view_count || 0,
+            copyCount: p.copy_count || 0,
+            favoriteCount: p.favorite_count || 0,
+            score: p.score || 0,
             isTrending: Boolean(p.is_trending),
           };
         });
@@ -85,6 +88,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             promptText: p.prompt_text,
             category: catObj ? catObj.name : 'Trending',
             viewCount: p.view_count || 0,
+            copyCount: p.copy_count || 0,
+            favoriteCount: p.favorite_count || 0,
+            score: p.score || 0,
             isTrending: true,
           };
         });

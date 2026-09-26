@@ -5,6 +5,8 @@ export interface PromptItem {
   category: string;
   viewCount?: number;
   copyCount?: number;
+  favoriteCount?: number;
+  score?: number;
   isTrending?: boolean;
 }
 

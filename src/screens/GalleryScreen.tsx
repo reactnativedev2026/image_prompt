@@ -25,6 +25,7 @@ import { fetchCategories, fetchPrompts, ApiCategory } from '../utils/api';
 import { logScreenView, logSelectCategory, logSearchPrompt } from '../utils/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { prefetchPromptImages } from '../utils/imagePrefetch';
+import FastImage from 'react-native-fast-image';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 40) / 3;
@@ -102,10 +103,14 @@ const AnimatedCard = React.memo(({ item, index, navigation, toggleFavorite, isFa
         onPress={() => navigation.navigate('PromptDetail', { item, promptsList })}
         style={styles.cardInner}
       >
-        <Image
-          source={{ uri: item.imageUrl }}
+        <FastImage
+          source={{
+            uri: item.imageUrl,
+            priority: FastImage.priority.normal,
+            cache: FastImage.cacheControl.immutable,
+          }}
           style={styles.image}
-          fadeDuration={Platform.OS === 'android' ? 250 : 0}
+          resizeMode={FastImage.resizeMode.cover}
         />
         {/* Top-Right Badge: Fire for trending, Image icon for regular */}
         <View style={[styles.imageIconBadge, item.isTrending && { backgroundColor: 'rgba(255, 61, 0, 0.9)' }]}>
@@ -116,11 +121,8 @@ const AnimatedCard = React.memo(({ item, index, navigation, toggleFavorite, isFa
         <View style={styles.cardInfoOverlay}>
           <View style={styles.cardFooter}>
             <View style={styles.ratingWrap}>
-              <Icon name="eye-outline" size={11} color="#E2E8F0" />
-              <Text style={[styles.ratingText, { color: '#E2E8F0', marginLeft: 2, marginRight: 6 }]}>{item.viewCount || 0}</Text>
-              
-              <Icon name="content-copy" size={10} color="#E2E8F0" />
-              <Text style={[styles.ratingText, { color: '#E2E8F0', marginLeft: 2 }]}>{item.copyCount || 0}</Text>
+              <Icon name="star" size={10} color="#FFB300" />
+              <Text style={styles.ratingText}>{item.score || 0}</Text>
             </View>
             <TouchableOpacity
               onPress={() => toggleFavorite(item)}
@@ -210,9 +212,9 @@ export const GalleryScreen = () => {
 
   // Filter Modal & Sorting state
   const [filterVisible, setFilterVisible] = useState(false);
-  const [sortBy, setSortBy] = useState<'default' | 'views' | 'alphabetical'>('default');
+  const [sortBy, setSortBy] = useState<'popular' | 'latest' | 'oldest' | 'random'>('popular');
   const [tempCategory, setTempCategory] = useState(selectedCategory);
-  const [tempSortBy, setTempSortBy] = useState<'default' | 'views' | 'alphabetical'>('default');
+  const [tempSortBy, setTempSortBy] = useState<'popular' | 'latest' | 'oldest' | 'random'>('popular');
 
   const openFilterModal = () => {
     setTempCategory(selectedCategory);
@@ -228,7 +230,7 @@ export const GalleryScreen = () => {
 
   const resetFilter = () => {
     setTempCategory('All');
-    setTempSortBy('default');
+    setTempSortBy('popular');
   };
 
   const shufflePrompts = () => {
@@ -243,7 +245,7 @@ export const GalleryScreen = () => {
     });
   };
 
-  const loadData = async (pageNum = 1, isRefresh = false, searchStr = debouncedSearchQuery) => {
+  const loadData = async (pageNum = 1, isRefresh = false, searchStr = debouncedSearchQuery, orderStr = sortBy) => {
     if (pageNum === 1) {
       if (!isRefresh) setLoading(true);
     } else {
@@ -263,7 +265,7 @@ export const GalleryScreen = () => {
 
       const [cats, pts] = await Promise.all([
         dbCategories.length === 0 ? fetchCategories() : Promise.resolve(dbCategories),
-        fetchPrompts(catId, searchStr.trim() || undefined, isTrendingFilter, pageNum, PAGE_LIMIT)
+        fetchPrompts(catId, searchStr.trim() || undefined, isTrendingFilter, pageNum, PAGE_LIMIT, orderStr)
       ]);
 
       if (dbCategories.length === 0 && cats && cats.length > 0) {
@@ -284,6 +286,8 @@ export const GalleryScreen = () => {
             category: catObj ? catObj.name : 'Other',
             viewCount: p.view_count || 0,
             copyCount: p.copy_count || 0,
+            favoriteCount: p.favorite_count || 0,
+            score: p.score || 0,
             isTrending: Boolean(p.is_trending)
           };
         });
@@ -356,8 +360,8 @@ export const GalleryScreen = () => {
 
     setPage(1);
     setHasMore(true);
-    loadData(1, false, debouncedSearchQuery);
-  }, [selectedCategory, debouncedSearchQuery]);
+    loadData(1, false, debouncedSearchQuery, sortBy);
+  }, [selectedCategory, debouncedSearchQuery, sortBy]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -390,16 +394,7 @@ export const GalleryScreen = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const sortedPrompts = React.useMemo(() => {
-    if (sortBy === 'views') {
-      return [...filteredPrompts].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
-    }
-    if (sortBy === 'alphabetical') {
-      return [...filteredPrompts].sort((a, b) => a.promptText.localeCompare(b.promptText));
-    }
-    // Simple regular order (no forced trending on top)
-    return filteredPrompts;
-  }, [filteredPrompts, sortBy]);
+  const sortedPrompts = filteredPrompts; // Now sorted strictly via backend API!
 
   const insets = useSafeAreaInsets();
 
@@ -448,7 +443,7 @@ export const GalleryScreen = () => {
           >
             <Icon name="tune" size={20} color="#FFF" />
           </LinearGradient>
-          {(selectedCategory !== 'All' || sortBy !== 'default') && (
+          {(selectedCategory !== 'All' || sortBy !== 'popular') && (
             <View style={styles.filterActiveDot} />
           )}
         </TouchableOpacity>
@@ -675,30 +670,39 @@ export const GalleryScreen = () => {
               <Text style={[styles.filterSectionLabel, { marginTop: 22 }]}>SORT PROMPTS BY</Text>
 
               <TouchableOpacity
-                style={[styles.filterOption, tempSortBy === 'default' && styles.filterOptionActive]}
-                onPress={() => setTempSortBy('default')}
+                style={[styles.filterOption, tempSortBy === 'popular' && styles.filterOptionActive]}
+                onPress={() => setTempSortBy('popular')}
               >
-                <Icon name="clock-outline" size={20} color={tempSortBy === 'default' ? '#A15DFB' : '#94A3B8'} />
-                <Text style={[styles.filterOptionLabel, tempSortBy === 'default' && styles.filterOptionLabelActive]}>Default (Latest)</Text>
-                {tempSortBy === 'default' && <Icon name="check" size={20} color="#A15DFB" />}
+                <Icon name="fire" size={20} color={tempSortBy === 'popular' ? '#A15DFB' : '#94A3B8'} />
+                <Text style={[styles.filterOptionLabel, tempSortBy === 'popular' && styles.filterOptionLabelActive]}>Most Popular</Text>
+                {tempSortBy === 'popular' && <Icon name="check" size={20} color="#A15DFB" />}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.filterOption, tempSortBy === 'views' && styles.filterOptionActive]}
-                onPress={() => setTempSortBy('views')}
+                style={[styles.filterOption, tempSortBy === 'latest' && styles.filterOptionActive]}
+                onPress={() => setTempSortBy('latest')}
               >
-                <Icon name="eye-outline" size={20} color={tempSortBy === 'views' ? '#A15DFB' : '#94A3B8'} />
-                <Text style={[styles.filterOptionLabel, tempSortBy === 'views' && styles.filterOptionLabelActive]}>Popularity (Most Viewed)</Text>
-                {tempSortBy === 'views' && <Icon name="check" size={20} color="#A15DFB" />}
+                <Icon name="clock-outline" size={20} color={tempSortBy === 'latest' ? '#A15DFB' : '#94A3B8'} />
+                <Text style={[styles.filterOptionLabel, tempSortBy === 'latest' && styles.filterOptionLabelActive]}>Latest First</Text>
+                {tempSortBy === 'latest' && <Icon name="check" size={20} color="#A15DFB" />}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.filterOption, tempSortBy === 'alphabetical' && styles.filterOptionActive]}
-                onPress={() => setTempSortBy('alphabetical')}
+                style={[styles.filterOption, tempSortBy === 'oldest' && styles.filterOptionActive]}
+                onPress={() => setTempSortBy('oldest')}
               >
-                <Icon name="alpha-a-box-outline" size={20} color={tempSortBy === 'alphabetical' ? '#A15DFB' : '#94A3B8'} />
-                <Text style={[styles.filterOptionLabel, tempSortBy === 'alphabetical' && styles.filterOptionLabelActive]}>Alphabetical (A-Z)</Text>
-                {tempSortBy === 'alphabetical' && <Icon name="check" size={20} color="#A15DFB" />}
+                <Icon name="history" size={20} color={tempSortBy === 'oldest' ? '#A15DFB' : '#94A3B8'} />
+                <Text style={[styles.filterOptionLabel, tempSortBy === 'oldest' && styles.filterOptionLabelActive]}>Oldest First</Text>
+                {tempSortBy === 'oldest' && <Icon name="check" size={20} color="#A15DFB" />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.filterOption, tempSortBy === 'random' && styles.filterOptionActive]}
+                onPress={() => setTempSortBy('random')}
+              >
+                <Icon name="shuffle" size={20} color={tempSortBy === 'random' ? '#A15DFB' : '#94A3B8'} />
+                <Text style={[styles.filterOptionLabel, tempSortBy === 'random' && styles.filterOptionLabelActive]}>Random Shuffle</Text>
+                {tempSortBy === 'random' && <Icon name="check" size={20} color="#A15DFB" />}
               </TouchableOpacity>
 
               <TouchableOpacity

@@ -33,11 +33,11 @@ const AppContent = () => {
 
       console.log('App open count:', count);
 
-      // Show rating modal on 3rd open
-      if (count === 3) {
+      // Show rating modal early (2nd open) and again on 5th open if not rated yet
+      if (count === 2 || count === 5) {
         setTimeout(() => {
           setRatingModalOpen(true);
-        }, 2000); // 2s delay so app fully loads first
+        }, 1500); // 1.5s delay so app fully loads first
       }
     } catch (error) {
       console.log('Error checking app open count:', error);

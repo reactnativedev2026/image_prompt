@@ -30,6 +30,8 @@ import { colors } from '../theme/colors';
 import { logScreenView, logCopyPrompt, logSharePrompt, logToggleFavorite } from '../utils/analytics';
 import { PLAY_STORE_URL } from '../constants';
 import { prefetchPromptImages } from '../utils/imagePrefetch';
+import { incrementCopyCount, incrementFavoriteCount, incrementViewCount } from '../utils/api';
+import FastImage from 'react-native-fast-image';
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -92,11 +94,22 @@ const ReelItem = ({
   const [promptModalVisible, setPromptModalVisible] = React.useState(false);
   const [guideModalVisible, setGuideModalVisible] = React.useState(false);
   const [guideLang, setGuideLang] = React.useState<'hi' | 'en'>('hi');
+  const hasRecordedCopy = React.useRef(false);
+
+  const triggerCopyAPI = () => {
+    if (hasRecordedCopy.current) return;
+    const numId = parseInt(item.id, 10);
+    if (!isNaN(numId)) {
+      hasRecordedCopy.current = true;
+      incrementCopyCount(numId).catch(console.error);
+    }
+  };
 
   const handleCopy = () => {
     Clipboard.setString(item.promptText);
     logCopyPrompt(item.id, meta.title);
     showCopiedToast();
+    triggerCopyAPI();
   };
 
   const handleShare = async () => {
@@ -114,6 +127,13 @@ const ReelItem = ({
   const handleFavoritePress = () => {
     logToggleFavorite(item.id, meta.title, !favored);
     toggleFavorite(item);
+    
+    if (!favored) {
+      const numId = parseInt(item.id, 10);
+      if (!isNaN(numId)) {
+        incrementFavoriteCount(numId).catch(console.error);
+      }
+    }
   };
 
   return (
@@ -160,7 +180,15 @@ const ReelItem = ({
         {/* ── Main Hero Image Box ── */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: item.imageUrl }} style={StyleSheet.absoluteFillObject} blurRadius={20} />
-          <Image source={{ uri: item.imageUrl }} style={styles.heroImage} />
+          <FastImage
+            source={{
+              uri: item.imageUrl,
+              priority: FastImage.priority.high,
+              cache: FastImage.cacheControl.immutable,
+            }}
+            style={styles.heroImage}
+            resizeMode={FastImage.resizeMode.cover}
+          />
         </View>
 
         {/* ── Title ── */}
@@ -217,6 +245,8 @@ const ReelItem = ({
                 if (Platform.OS === 'android') {
                   ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
                 }
+                
+                triggerCopyAPI();
 
                 if (tool.appUrl) {
                   try {
@@ -601,6 +631,20 @@ export const PromptDetailScreen = () => {
     });
   }, []);
 
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems && viewableItems.length > 0) {
+      const activeItem = viewableItems[0].item;
+      const numId = parseInt(activeItem.id, 10);
+      if (!isNaN(numId)) {
+        incrementViewCount(numId).catch(console.error);
+      }
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50
+  }).current;
+
   return (
     <View style={styles.root}>
       <FlatList
@@ -614,6 +658,8 @@ export const PromptDetailScreen = () => {
           offset: windowHeight * index,
           index,
         })}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         renderItem={({ item: reelItem }) => (
           <ReelItem
             item={reelItem}
