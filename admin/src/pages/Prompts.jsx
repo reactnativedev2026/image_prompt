@@ -1158,11 +1158,19 @@ export default function Prompts() {
                       bgcolor: '#fafafa'
                     }}
                   >
-                    <Box display="flex" alignItems="center" gap={0.5} color="text.secondary">
-                      <VisibilityIcon sx={{ fontSize: 14, color: '#94a3b8' }} />
-                      <Typography variant="caption" fontWeight="600" color="text.secondary" fontSize="0.75rem">
-                        {prompt.view_count || 0}
-                      </Typography>
+                    <Box display="flex" alignItems="center" gap={1.5}>
+                      <Box display="flex" alignItems="center" gap={0.5} color="text.secondary" title="Views">
+                        <VisibilityIcon sx={{ fontSize: 14, color: '#94a3b8' }} />
+                        <Typography variant="caption" fontWeight="600" color="text.secondary" fontSize="0.75rem">
+                          {prompt.view_count || 0}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={0.5} color="text.secondary" title="Copies">
+                        <ContentCopyIcon sx={{ fontSize: 14, color: '#94a3b8' }} />
+                        <Typography variant="caption" fontWeight="600" color="text.secondary" fontSize="0.75rem">
+                          {prompt.copy_count || 0}
+                        </Typography>
+                      </Box>
                     </Box>
 
                     <Box display="flex" alignItems="center" gap={0.4}>
