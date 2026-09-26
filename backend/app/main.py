@@ -19,6 +19,12 @@ try:
             if "is_trending" not in columns:
                 conn.execute(text("ALTER TABLE prompts ADD COLUMN is_trending BOOLEAN DEFAULT FALSE"))
                 conn.commit()
+            if "copy_count" not in columns:
+                conn.execute(text("ALTER TABLE prompts ADD COLUMN copy_count INTEGER DEFAULT 0"))
+                conn.commit()
+            if "favorite_count" not in columns:
+                conn.execute(text("ALTER TABLE prompts ADD COLUMN favorite_count INTEGER DEFAULT 0"))
+                conn.commit()
 except Exception as e:
     print(f"Startup migration notice: {e}")
 

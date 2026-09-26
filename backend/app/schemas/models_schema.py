@@ -43,8 +43,11 @@ class PromptResponse(BaseModel):
     image_url: str
     prompt_text: str
     view_count: int
+    copy_count: int
+    favorite_count: int = 0
     category_id: int
     is_trending: bool = False
+    score: int = 0
 
     class Config:
         from_attributes = True

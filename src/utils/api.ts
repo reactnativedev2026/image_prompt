@@ -14,8 +14,11 @@ export interface ApiPrompt {
   image_url: string;
   prompt_text: string;
   view_count: number;
+  copy_count: number;
+  favorite_count?: number;
   category_id: number;
   is_trending?: boolean;
+  score?: number;
 }
 
 export interface ApiCategory {
@@ -39,7 +42,7 @@ export const fetchPrompts = async (
   isTrending?: boolean,
   page: number = 1,
   limit: number = 21,
-  order: string = 'random'
+  order: string = 'popular'
 ): Promise<ApiPrompt[]> => {
   try {
     const params: any = {
@@ -68,7 +71,7 @@ export const fetchTrendingPrompts = async (
   categoryId?: number,
   page: number = 1,
   limit: number = 20,
-  order: string = 'random'
+  order: string = 'popular'
 ): Promise<ApiPrompt[]> => {
   try {
     const params: any = { page, limit, order };
@@ -88,5 +91,21 @@ export const incrementViewCount = async (id: number): Promise<void> => {
     await api.post(`/api/prompts/${id}/view`);
   } catch (error) {
     console.error('Error incrementing view count:', error);
+  }
+};
+
+export const incrementCopyCount = async (id: number): Promise<void> => {
+  try {
+    await api.post(`/api/prompts/${id}/copy`);
+  } catch (error) {
+    console.error('Error incrementing copy count:', error);
+  }
+};
+
+export const incrementFavoriteCount = async (id: number): Promise<void> => {
+  try {
+    await api.post(`/api/prompts/${id}/favorite`);
+  } catch (error) {
+    console.error('Error incrementing favorite count:', error);
   }
 };

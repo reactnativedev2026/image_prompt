@@ -116,8 +116,11 @@ const AnimatedCard = React.memo(({ item, index, navigation, toggleFavorite, isFa
         <View style={styles.cardInfoOverlay}>
           <View style={styles.cardFooter}>
             <View style={styles.ratingWrap}>
-              <Icon name="star" size={10} color="#FFB300" />
-              <Text style={styles.ratingText}>{meta.rating}</Text>
+              <Icon name="eye-outline" size={11} color="#E2E8F0" />
+              <Text style={[styles.ratingText, { color: '#E2E8F0', marginLeft: 2, marginRight: 6 }]}>{item.viewCount || 0}</Text>
+              
+              <Icon name="content-copy" size={10} color="#E2E8F0" />
+              <Text style={[styles.ratingText, { color: '#E2E8F0', marginLeft: 2 }]}>{item.copyCount || 0}</Text>
             </View>
             <TouchableOpacity
               onPress={() => toggleFavorite(item)}
@@ -280,6 +283,7 @@ export const GalleryScreen = () => {
             promptText: p.prompt_text,
             category: catObj ? catObj.name : 'Other',
             viewCount: p.view_count || 0,
+            copyCount: p.copy_count || 0,
             isTrending: Boolean(p.is_trending)
           };
         });
@@ -308,6 +312,7 @@ export const GalleryScreen = () => {
             const mappedMock = mockPrompts.map((p, idx) => ({
               ...p,
               viewCount: p.viewCount || Math.floor(Math.random() * 1000) + 100,
+              copyCount: p.copyCount || Math.floor(Math.random() * 500) + 10,
               isTrending: idx < 6
             }));
             setPrompts(mappedMock.slice(0, PAGE_LIMIT));
@@ -326,6 +331,7 @@ export const GalleryScreen = () => {
         const mappedMock = mockPrompts.map((p, idx) => ({
           ...p,
           viewCount: p.viewCount || Math.floor(Math.random() * 1000) + 100,
+          copyCount: p.copyCount || Math.floor(Math.random() * 500) + 10,
           isTrending: idx < 6
         }));
         setPrompts(mappedMock.slice(0, PAGE_LIMIT));

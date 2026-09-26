@@ -31,6 +31,8 @@ class Prompt(Base):
     prompt_text = Column(String, nullable=False)
     is_trending = Column(Boolean, default=False, nullable=False)
     view_count = Column(Integer, default=0)
+    copy_count = Column(Integer, default=0)
+    favorite_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="CASCADE"), nullable=False)

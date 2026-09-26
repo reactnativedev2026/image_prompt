@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, case, Integer, cast
+from datetime import datetime, timedelta
 from sqlalchemy.sql.expression import func
-from app.database import get_db
+from app.database import get_db, is_sqlite
 from app.models import Category, Prompt
 from app.schemas.models_schema import CategoryResponse, PromptResponse
 from app.services.s3 import normalize_image_url
@@ -59,7 +60,7 @@ def get_prompts(
     category_id: int | None = Query(None, description="Filter prompts by Category ID"),
     is_trending: bool | None = Query(None, description="Filter prompts by trending status"),
     search: str | None = Query(None, description="Search prompts by prompt text"),
-    order: str = Query("random", description="Ordering: 'random', 'latest', 'oldest', 'popular'"),
+    order: str = Query("popular", description="Ordering: 'random', 'latest', 'oldest', 'popular'"),
     include_all: bool = Query(False, description="Include all prompts including inactive S3"),
     only_aws: bool = Query(False, description="Filter only AWS S3 prompts"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
@@ -99,16 +100,37 @@ def get_prompts(
     elif order == "oldest":
         query = query.order_by(Prompt.id.asc())
     elif order in ("popular", "views"):
-        query = query.order_by(Prompt.view_count.desc())
+        if is_sqlite:
+            age_in_days = cast(func.julianday('now') - func.julianday(Prompt.created_at), Integer)
+        else:
+            age_in_days = cast(func.extract('day', func.now() - Prompt.created_at), Integer)
+            
+        freshness_bonus = case(
+            (age_in_days < 20, 100 - (age_in_days * 5)),
+            else_=0
+        ).cast(Integer)
+        
+        trending_bonus = case((Prompt.is_trending == True, 50), else_=0).cast(Integer)
+        score = (Prompt.copy_count * 10) + (Prompt.favorite_count * 5) + Prompt.view_count + freshness_bonus + trending_bonus
+        query = query.order_by(score.desc(), Prompt.created_at.desc())
     else:  # "latest"
         query = query.order_by(Prompt.id.desc())
 
     offset = (page - 1) * limit
     prompts = query.offset(offset).limit(limit).all()
     
-    # Dynamically normalize image_url to CDN if configured
+    # Dynamically normalize image_url to CDN if configured and calculate score
+    now = datetime.utcnow()
     for p in prompts:
         p.image_url = normalize_image_url(p.image_url)
+        s = (p.copy_count * 10) + (p.favorite_count * 5) + p.view_count
+        if p.created_at:
+            age = (now - p.created_at).days
+            if age < 20:
+                s += (100 - (age * 5))
+        if p.is_trending:
+            s += 50
+        p.score = s
         
     return prompts
 
@@ -118,7 +140,7 @@ def get_prompts(
 def get_trending_prompts(
     response: Response,
     category_id: int | None = Query(None, description="Filter trending prompts by Category ID"),
-    order: str = Query("random", description="Ordering: 'random', 'latest', 'popular'"),
+    order: str = Query("popular", description="Ordering: 'random', 'latest', 'popular'"),
     include_all: bool = Query(False, description="Include all prompts including inactive S3"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
@@ -142,14 +164,35 @@ def get_trending_prompts(
     if order == "random":
         query = query.order_by(func.random())
     elif order in ("popular", "views"):
-        query = query.order_by(Prompt.view_count.desc())
+        if is_sqlite:
+            age_in_days = cast(func.julianday('now') - func.julianday(Prompt.created_at), Integer)
+        else:
+            age_in_days = cast(func.extract('day', func.now() - Prompt.created_at), Integer)
+            
+        freshness_bonus = case(
+            (age_in_days < 20, 100 - (age_in_days * 5)),
+            else_=0
+        ).cast(Integer)
+        
+        trending_bonus = case((Prompt.is_trending == True, 50), else_=0).cast(Integer)
+        score = (Prompt.copy_count * 10) + (Prompt.favorite_count * 5) + Prompt.view_count + freshness_bonus + trending_bonus
+        query = query.order_by(score.desc(), Prompt.created_at.desc())
     else:  # "latest"
         query = query.order_by(Prompt.id.desc())
 
     offset = (page - 1) * limit
     prompts = query.offset(offset).limit(limit).all()
+    now = datetime.utcnow()
     for p in prompts:
         p.image_url = normalize_image_url(p.image_url)
+        s = (p.copy_count * 10) + (p.favorite_count * 5) + p.view_count
+        if p.created_at:
+            age = (now - p.created_at).days
+            if age < 20:
+                s += (100 - (age * 5))
+        if p.is_trending:
+            s += 50
+        p.score = s
     return prompts
 
 
@@ -165,3 +208,31 @@ def increment_prompt_view(id: int, db: Session = Depends(get_db)):
     prompt.view_count += 1
     db.commit()
     return {"message": "View count incremented successfully", "views": prompt.view_count}
+
+
+# ── Increment Prompt Copy Count (App view) ──
+@router.post("/prompts/{id}/copy", status_code=status.HTTP_200_OK)
+def increment_prompt_copy(id: int, db: Session = Depends(get_db)):
+    prompt = db.query(Prompt).filter(Prompt.id == id).first()
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prompt not found"
+        )
+    prompt.copy_count += 1
+    db.commit()
+    return {"message": "Copy count incremented successfully", "copies": prompt.copy_count}
+
+
+# ── Increment Prompt Favorite Count (App view) ──
+@router.post("/prompts/{id}/favorite", status_code=status.HTTP_200_OK)
+def increment_prompt_favorite(id: int, db: Session = Depends(get_db)):
+    prompt = db.query(Prompt).filter(Prompt.id == id).first()
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prompt not found"
+        )
+    prompt.favorite_count += 1
+    db.commit()
+    return {"message": "Favorite count incremented successfully", "favorites": prompt.favorite_count}
