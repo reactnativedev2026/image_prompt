@@ -3,6 +3,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PromptItem } from '../data/mockPrompts';
 import { ApiCategory, fetchCategories, fetchPrompts, fetchTrendingPrompts } from '../utils/api';
 import { prefetchPromptImages } from '../utils/imagePrefetch';
+import { InterstitialAd, TestIds, AdEventType } from 'react-native-google-mobile-ads';
+
+const interstitialAdUnitId = __DEV__ ? TestIds.INTERSTITIAL : 'ca-app-pub-6300754811006363/7535534141';
+const interstitial = InterstitialAd.createForAdRequest(interstitialAdUnitId, {
+  requestNonPersonalizedAdsOnly: true,
+});
+import { AdState } from '../utils/adState';
 
 const CACHE_CATEGORIES_KEY = 'CACHE_CATEGORIES_V1';
 const CACHE_HOME_PROMPTS_KEY = 'CACHE_HOME_PROMPTS_V1';
@@ -27,6 +34,7 @@ interface AppContextProps {
   setPreloadedTrending: React.Dispatch<React.SetStateAction<PromptItem[]>>;
   isPreloaded: boolean;
   preloadData: () => Promise<void>;
+  showInterstitialAd: () => void;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -40,10 +48,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [preloadedCategories, setPreloadedCategories] = useState<ApiCategory[]>([]);
   const [preloadedTrending, setPreloadedTrending] = useState<PromptItem[]>([]);
   const [isPreloaded, setIsPreloaded] = useState<boolean>(false);
+  const actionCount = React.useRef(0);
 
   useEffect(() => {
     loadData();
+
+    const unsubscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+      console.log('Interstitial Ad loaded');
+    });
+
+    const unsubscribeClosed = interstitial.addAdEventListener(AdEventType.CLOSED, () => {
+      AdState.isAdShowing = false;
+      AdState.lastAdShowTime = Date.now();
+      interstitial.load(); // Reload when closed
+    });
+
+    interstitial.load();
+
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeClosed();
+    };
   }, []);
+
+  const showInterstitialAd = () => {
+    actionCount.current += 1;
+    // Show ad on 1st action, then every 3 actions (1, 4, 7...)
+    if (actionCount.current === 1 || actionCount.current % 3 === 1) {
+      if (interstitial.loaded) {
+        AdState.isAdShowing = true;
+        interstitial.show();
+      } else {
+        interstitial.load();
+      }
+    }
+  };
 
   const preloadData = async () => {
     try {
@@ -200,6 +239,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setPreloadedTrending,
       isPreloaded,
       preloadData,
+      showInterstitialAd,
     }}>
       {children}
     </AppContext.Provider>

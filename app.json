@@ -1,4 +1,8 @@
 {
   "name": "ImagePrompt",
-  "displayName": "Pro Prompt"
+  "displayName": "Pro Prompt",
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-6300754811006363~7327882091",
+    "ios_app_id": "ca-app-pub-6300754811006363~7327882091"
+  }
 }

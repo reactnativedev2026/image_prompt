@@ -67,6 +67,8 @@ const getPromptDisplayMeta = (id: string, category: string) => {
   return metas[id] || { title: category + ' Item', rating: '3.0K' };
 };
 
+import { AdState } from '../utils/adState';
+
 const showCopiedToast = () => {
   if (Platform.OS === 'android') {
     ToastAndroid.show('✨ Copied to clipboard!', ToastAndroid.SHORT);
@@ -88,7 +90,7 @@ const ReelItem = ({
   screenHeight: number;
   screenWidth: number;
 }) => {
-  const { isFavorite, toggleFavorite } = useAppContext();
+  const { isFavorite, toggleFavorite, showInterstitialAd } = useAppContext();
   const meta = getPromptDisplayMeta(item.id, item.category);
   const favored = isFavorite(item.id);
   const [promptModalVisible, setPromptModalVisible] = React.useState(false);
@@ -110,17 +112,25 @@ const ReelItem = ({
     logCopyPrompt(item.id, meta.title);
     showCopiedToast();
     triggerCopyAPI();
+    showInterstitialAd();
   };
 
   const handleShare = async () => {
     try {
       logSharePrompt(item.id, meta.title);
+      showInterstitialAd();
+      AdState.isAppPausedForAction = true;
       await RNShare.share({
         title: 'Share Prompt',
         message: `✨ Pro Prompt:\n\n${item.promptText}\n\n📲 Download Pro Prompt App for more:\n${PLAY_STORE_URL}`,
       });
     } catch (e: any) {
       console.error(e.message);
+    } finally {
+      AdState.lastAdShowTime = Date.now();
+      setTimeout(() => {
+        AdState.isAppPausedForAction = false;
+      }, 1000);
     }
   };
 
@@ -247,7 +257,9 @@ const ReelItem = ({
                 }
                 
                 triggerCopyAPI();
+                showInterstitialAd();
 
+                AdState.isAppPausedForAction = true;
                 if (tool.appUrl) {
                   try {
                     await Linking.openURL(tool.appUrl);
@@ -267,12 +279,18 @@ const ReelItem = ({
                     } else {
                       console.log(`${tool.name} app likely opened, ignoring fallback error:`, error);
                     }
+                  } finally {
+                    AdState.lastAdShowTime = Date.now();
+                    setTimeout(() => { AdState.isAppPausedForAction = false; }, 1000);
                   }
                 } else {
                   try {
                     await Linking.openURL(tool.url);
                   } catch (webError) {
                     console.log(`Unable to open ${tool.name} web:`, webError);
+                  } finally {
+                    AdState.lastAdShowTime = Date.now();
+                    setTimeout(() => { AdState.isAppPausedForAction = false; }, 1000);
                   }
                 }
               }}

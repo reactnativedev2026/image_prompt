@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, Image, DeviceEventEmitter } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
@@ -60,12 +60,38 @@ export const OnboardingScreen = () => {
       })
     ]).start();
 
-    // 3. Navigation redirect after 3.2 seconds
-    const timer = setTimeout(() => {
-      navigation.replace('Main');
-    }, 2200);
+    const navigateToMain = () => {
+      Animated.parallel([
+        Animated.timing(logoOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(textOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        navigation.replace('Main');
+      });
+    };
 
-    return () => clearTimeout(timer);
+    // 3. Navigation redirect after 3.2 seconds
+    let timer = setTimeout(navigateToMain, 2200);
+
+    const subscription = DeviceEventEmitter.addListener('appOpenAdShown', () => {
+      clearTimeout(timer);
+      // Let the native Ad animate in smoothly before we block the JS thread with the Main screen
+      setTimeout(() => {
+        navigation.replace('Main');
+      }, 500);
+    });
+
+    return () => {
+      clearTimeout(timer);
+      subscription.remove();
+    };
   }, []);
 
   return (
