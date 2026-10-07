@@ -118,7 +118,6 @@ const ReelItem = ({
   const handleShare = async () => {
     try {
       logSharePrompt(item.id, meta.title);
-      showInterstitialAd();
       AdState.isAppPausedForAction = true;
       await RNShare.share({
         title: 'Share Prompt',
@@ -126,18 +125,13 @@ const ReelItem = ({
       });
     } catch (e: any) {
       console.error(e.message);
-    } finally {
-      AdState.lastAdShowTime = Date.now();
-      setTimeout(() => {
-        AdState.isAppPausedForAction = false;
-      }, 1000);
     }
   };
 
   const handleFavoritePress = () => {
     logToggleFavorite(item.id, meta.title, !favored);
     toggleFavorite(item);
-    
+
     if (!favored) {
       const numId = parseInt(item.id, 10);
       if (!isNaN(numId)) {
@@ -150,7 +144,13 @@ const ReelItem = ({
     <View style={[styles.reelItemContainer, { height: screenHeight, width: screenWidth }]}>
       {/* ── Custom Top Header Bar ── */}
       <View style={[styles.header, { marginTop: insets.top }]}>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => {
+            showInterstitialAd();
+            navigation.goBack();
+          }}
+        >
           <Icon name="chevron-left" size={32} color="#FFF" />
         </TouchableOpacity>
 
@@ -255,10 +255,10 @@ const ReelItem = ({
                 if (Platform.OS === 'android') {
                   ToastAndroid.show('📋 Prompt Copied!', ToastAndroid.SHORT);
                 }
-                
-                triggerCopyAPI();
-                showInterstitialAd();
 
+                triggerCopyAPI();
+
+                // Prevent App Open ad from triggering when user returns from external app
                 AdState.isAppPausedForAction = true;
                 if (tool.appUrl) {
                   try {
@@ -279,18 +279,12 @@ const ReelItem = ({
                     } else {
                       console.log(`${tool.name} app likely opened, ignoring fallback error:`, error);
                     }
-                  } finally {
-                    AdState.lastAdShowTime = Date.now();
-                    setTimeout(() => { AdState.isAppPausedForAction = false; }, 1000);
                   }
                 } else {
                   try {
                     await Linking.openURL(tool.url);
                   } catch (webError) {
                     console.log(`Unable to open ${tool.name} web:`, webError);
-                  } finally {
-                    AdState.lastAdShowTime = Date.now();
-                    setTimeout(() => { AdState.isAppPausedForAction = false; }, 1000);
                   }
                 }
               }}

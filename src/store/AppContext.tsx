@@ -63,22 +63,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       interstitial.load(); // Reload when closed
     });
 
+    const unsubscribeError = interstitial.addAdEventListener(AdEventType.ERROR, (error) => {
+      console.log('Interstitial Ad Error:', error);
+      AdState.isAdShowing = false;
+    });
+
     interstitial.load();
 
     return () => {
       unsubscribeLoaded();
       unsubscribeClosed();
+      unsubscribeError();
     };
   }, []);
 
   const showInterstitialAd = () => {
     actionCount.current += 1;
-    // Show ad on 1st action, then every 3 actions (1, 4, 7...)
-    if (actionCount.current === 1 || actionCount.current % 3 === 1) {
-      if (interstitial.loaded) {
+    const now = Date.now();
+    // AdMob Policy compliance: only show at natural transitions, not on initial actions, with 45s cooldown
+    if (actionCount.current > 2 && actionCount.current % 4 === 0) {
+      if (interstitial.loaded && !AdState.isAdShowing && (now - AdState.lastAdShowTime > 5000)) {
         AdState.isAdShowing = true;
         interstitial.show();
-      } else {
+      } else if (!interstitial.loaded) {
         interstitial.load();
       }
     }
@@ -95,7 +102,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const validCats = cats && cats.length > 0 ? cats : [];
       if (validCats.length > 0) {
         setPreloadedCategories(validCats);
-        AsyncStorage.setItem(CACHE_CATEGORIES_KEY, JSON.stringify(validCats)).catch(() => {});
+        AsyncStorage.setItem(CACHE_CATEGORIES_KEY, JSON.stringify(validCats)).catch(() => { });
       }
 
       if (pts && pts.length > 0) {
@@ -114,7 +121,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           };
         });
         setPreloadedPrompts(mapped);
-        AsyncStorage.setItem(CACHE_HOME_PROMPTS_KEY, JSON.stringify(mapped)).catch(() => {});
+        AsyncStorage.setItem(CACHE_HOME_PROMPTS_KEY, JSON.stringify(mapped)).catch(() => { });
         prefetchPromptImages(mapped, 12);
       }
 
@@ -134,7 +141,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           };
         });
         setPreloadedTrending(mappedTrending);
-        AsyncStorage.setItem(CACHE_TRENDING_PROMPTS_KEY, JSON.stringify(mappedTrending)).catch(() => {});
+        AsyncStorage.setItem(CACHE_TRENDING_PROMPTS_KEY, JSON.stringify(mappedTrending)).catch(() => { });
         prefetchPromptImages(mappedTrending, 12);
       }
 

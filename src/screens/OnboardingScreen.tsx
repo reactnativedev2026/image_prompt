@@ -5,6 +5,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../theme/colors';
 import { useAppContext } from '../store/AppContext';
 import { logScreenView } from '../utils/analytics';
+import { AdState } from '../utils/adState';
 
 const { width } = Dimensions.get('window');
 
@@ -52,7 +53,7 @@ export const OnboardingScreen = () => {
           useNativeDriver: true,
         }),
       ]),
-      // Loading Progress bar animation (animates over 3 seconds)
+      // Loading Progress bar animation (animates over 2 seconds)
       Animated.timing(progressWidth, {
         toValue: 1,
         duration: 2000,
@@ -60,7 +61,14 @@ export const OnboardingScreen = () => {
       })
     ]).start();
 
+    AdState.isOnboardingActive = true;
+    let hasNavigated = false;
+
     const navigateToMain = () => {
+      if (hasNavigated) return;
+      hasNavigated = true;
+      AdState.isOnboardingActive = false;
+
       Animated.parallel([
         Animated.timing(logoOpacity, {
           toValue: 0,
@@ -77,20 +85,22 @@ export const OnboardingScreen = () => {
       });
     };
 
-    // 3. Navigation redirect after 3.2 seconds
-    let timer = setTimeout(navigateToMain, 2200);
+    // Splash navigation timer: only navigate if ad is NOT showing
+    const timer = setTimeout(() => {
+      if (!AdState.isAdShowing) {
+        navigateToMain();
+      }
+    }, 2200);
 
-    const subscription = DeviceEventEmitter.addListener('appOpenAdShown', () => {
-      clearTimeout(timer);
-      // Let the native Ad animate in smoothly before we block the JS thread with the Main screen
-      setTimeout(() => {
-        navigation.replace('Main');
-      }, 500);
+    // If an App Open ad opened during splash, wait until user closes it before navigating
+    const adCloseSub = DeviceEventEmitter.addListener('appOpenAdClosed', () => {
+      navigateToMain();
     });
 
     return () => {
       clearTimeout(timer);
-      subscription.remove();
+      adCloseSub.remove();
+      AdState.isOnboardingActive = false;
     };
   }, []);
 
