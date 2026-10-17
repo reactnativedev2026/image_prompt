@@ -117,6 +117,7 @@ def get_categories(
 ):
     prompt_sub = (
         db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
+        .filter(~Prompt.image_url.contains("cloudinary.com"))
         .group_by(Prompt.category_id)
         .subquery()
     )
@@ -163,6 +164,9 @@ def get_prompts(
     response.headers["Expires"] = "0"
     
     query = db.query(Prompt)
+    
+    # Hide expired Cloudinary images from GET API
+    query = query.filter(~Prompt.image_url.contains("cloudinary.com"))
     
     # Conditional AWS filtering
     if only_aws:
