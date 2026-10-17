@@ -115,19 +115,11 @@ def get_categories(
     include_all: bool = Query(True, description="Include all prompts including inactive AWS S3"),
     db: Session = Depends(get_db)
 ):
-    if not include_all:
-        prompt_sub = (
-            db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
-            .filter(~Prompt.image_url.contains("amazonaws.com"))
-            .group_by(Prompt.category_id)
-            .subquery()
-        )
-    else:
-        prompt_sub = (
-            db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
-            .group_by(Prompt.category_id)
-            .subquery()
-        )
+    prompt_sub = (
+        db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
+        .group_by(Prompt.category_id)
+        .subquery()
+    )
 
     category_counts = (
         db.query(
@@ -175,8 +167,6 @@ def get_prompts(
     # Conditional AWS filtering
     if only_aws:
         query = query.filter(Prompt.image_url.contains("amazonaws.com"))
-    elif not include_all:
-        query = query.filter(~Prompt.image_url.contains("amazonaws.com"))
     
     if category_id is not None:
         query = query.filter(Prompt.category_id == category_id)

@@ -1,8 +1,8 @@
 import io
 from ..config import settings
-from .services.s3 import upload_image_to_s3, rename_or_move_s3_image, delete_s3_image
+from .s3 import upload_image_to_s3, rename_or_move_s3_image, delete_s3_image
 # from app.services.cloudinary_service import upload_image_to_cloudinary, rename_or_move_cloudinary_image, delete_cloudinary_image
-from .services.local_backup import save_local_image_backup, organize_local_backup
+from .local_backup import save_local_image_backup, organize_local_backup
 
 def upload_image(file_obj, filename: str = "", folder: str = "ai_prompt_gallery") -> dict:
     """
@@ -44,25 +44,17 @@ def rename_or_move_image(old_url_or_key: str, new_identifier: str) -> str:
 
     # 2. Organize in cloud storage
     if "amazonaws.com" in old_url_or_key or old_url_or_key.startswith("ai_prompt_gallery/"):
-        if "cloudinary.com" not in old_url_or_key:
-            return rename_or_move_s3_image(old_url_or_key, new_identifier)
-            
-#    # if "cloudinary.com" in old_url_or_key:
-#    #     return rename_or_move_cloudinary_image(old_url_or_key, new_identifier)
-        return rename_or_move_cloudinary_image(old_url_or_key, new_identifier)
+        return rename_or_move_s3_image(old_url_or_key, new_identifier)
         
     provider = getattr(settings, "STORAGE_PROVIDER", "s3").lower()
     if provider == "s3":
         return rename_or_move_s3_image(old_url_or_key, new_identifier)
-    return rename_or_move_cloudinary_image(old_url_or_key, new_identifier)
+    return old_url_or_key
 
 def delete_image(url_or_key: str) -> bool:
     """Deletes image from cloud storage provider."""
     if not url_or_key:
         return False
-        
-#    # if "cloudinary.com" in url_or_key:
-#        # return delete_cloudinary_image(url_or_key)
         
     if "amazonaws.com" in url_or_key:
         return delete_s3_image(url_or_key)
@@ -70,4 +62,4 @@ def delete_image(url_or_key: str) -> bool:
     provider = getattr(settings, "STORAGE_PROVIDER", "s3").lower()
     if provider == "s3":
         return delete_s3_image(url_or_key)
-    return delete_cloudinary_image(url_or_key)
+    return False

@@ -26,8 +26,6 @@ def get_admin_stats(
     current_admin: str = Depends(get_current_admin)
 ):
     base_query = db.query(Prompt)
-    if not include_all:
-        base_query = base_query.filter(~Prompt.image_url.contains("amazonaws.com"))
 
     total_prompts = base_query.count()
     trending_prompts = base_query.filter(Prompt.is_trending == True).count()
@@ -35,19 +33,11 @@ def get_admin_stats(
     total_views = base_query.with_entities(func.coalesce(func.sum(Prompt.view_count), 0)).scalar() or 0
     
     # Category with prompt counts
-    if not include_all:
-        prompt_sub = (
-            db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
-            .filter(~Prompt.image_url.contains("amazonaws.com"))
-            .group_by(Prompt.category_id)
-            .subquery()
-        )
-    else:
-        prompt_sub = (
-            db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
-            .group_by(Prompt.category_id)
-            .subquery()
-        )
+    prompt_sub = (
+        db.query(Prompt.category_id, func.count(Prompt.id).label("prompt_count"))
+        .group_by(Prompt.category_id)
+        .subquery()
+    )
 
     category_counts = (
         db.query(
