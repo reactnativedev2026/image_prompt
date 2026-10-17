@@ -1,5 +1,5 @@
 import io
-from .config import settings
+from ..config import settings
 from .services.s3 import upload_image_to_s3, rename_or_move_s3_image, delete_s3_image
 # from app.services.cloudinary_service import upload_image_to_cloudinary, rename_or_move_cloudinary_image, delete_cloudinary_image
 from .services.local_backup import save_local_image_backup, organize_local_backup
@@ -24,7 +24,8 @@ def upload_image(file_obj, filename: str = "", folder: str = "ai_prompt_gallery"
     if provider == "s3":
         upload_result = upload_image_to_s3(io.BytesIO(file_bytes), filename=filename, folder=folder, convert_to_webp=True)
     else:
-#        upload_result = upload_image_to_cloudinary(io.BytesIO(file_bytes), filename=filename, folder=folder)  # Cloudinary disabled
+        # Cloudinary support disabled; placeholder result
+        upload_result = {"url": "", "key": f"{folder}/{filename}"}
 
     # 3. Always save local server disk backup
     backup_key = upload_result.get("key") or upload_result.get("public_id") or f"{folder}/{filename}"
