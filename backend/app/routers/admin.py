@@ -2,16 +2,16 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.config import settings
-from app.models import Admin, Category, Prompt
-from app.schemas.models_schema import (
+from ..database import get_db
+from ..config import settings
+from ..models import Admin, Category, Prompt
+from ..schemas.models_schema import (
     AdminRegisterRequest, AdminLoginRequest, TokenResponse,
     CategoryCreateRequest, CategoryUpdateRequest, CategoryResponse,
     PromptCreateRequest, PromptResponse, PromptUpdateRequest
 )
-from app.routers.auth_utils import hash_password, verify_password, create_access_token, get_current_admin
-from app.services.storage import upload_image, rename_or_move_image, delete_image
+from ..routers.auth_utils import hash_password, verify_password, create_access_token, get_current_admin
+from ..services.storage import upload_image, rename_or_move_image, delete_image
 
 router = APIRouter(
     prefix="/api/admin",
@@ -21,7 +21,7 @@ router = APIRouter(
 # ── Overall Admin Stats API ──
 @router.get("/stats", status_code=status.HTTP_200_OK)
 def get_admin_stats(
-    include_all: bool = False,
+    include_all: bool = True,
     db: Session = Depends(get_db),
     current_admin: str = Depends(get_current_admin)
 ):

@@ -1,8 +1,8 @@
 import io
-from app.config import settings
-from app.services.s3 import upload_image_to_s3, rename_or_move_s3_image, delete_s3_image
+from .config import settings
+from .services.s3 import upload_image_to_s3, rename_or_move_s3_image, delete_s3_image
 # from app.services.cloudinary_service import upload_image_to_cloudinary, rename_or_move_cloudinary_image, delete_cloudinary_image
-from app.services.local_backup import save_local_image_backup, organize_local_backup
+from .services.local_backup import save_local_image_backup, organize_local_backup
 
 def upload_image(file_obj, filename: str = "", folder: str = "ai_prompt_gallery") -> dict:
     """

@@ -1,7 +1,7 @@
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
-from app.config import settings
+from ..config import settings
 
 def hash_password(password: str) -> str:
     pwd_bytes = password.encode("utf-8")

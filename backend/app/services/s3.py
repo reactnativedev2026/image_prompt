@@ -15,7 +15,7 @@ except ImportError:
 import io
 import uuid
 import re
-from app.config import settings
+from ..config import settings
 
 def get_s3_client():
     return boto3.client(

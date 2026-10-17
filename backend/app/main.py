@@ -3,9 +3,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
-from app.config import settings
-from app.database import engine, Base
-from app.routers import admin, prompts
+from .config import settings
+from .database import engine, Base
+from .routers import admin, prompts
 
 # Create DB Tables automatically on startup
 Base.metadata.create_all(bind=engine)

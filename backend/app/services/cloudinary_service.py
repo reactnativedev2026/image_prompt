@@ -8,7 +8,7 @@ try:
     HAS_CLOUDINARY = True
 except ImportError:
     HAS_CLOUDINARY = False
-from app.config import settings
+from ..config import settings
 
 def configure_cloudinary():
     """Initializes Cloudinary credentials from settings."""

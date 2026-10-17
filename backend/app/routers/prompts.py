@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, case, Integer, BigInteger, cast
 from datetime import datetime, timedelta
 from sqlalchemy.sql.expression import func
-from app.database import get_db, is_sqlite
-from app.models import Category, Prompt
-from app.schemas.models_schema import CategoryResponse, PromptResponse
-from app.services.s3 import normalize_image_url
+from ..database import get_db, is_sqlite
+from ..models import Category, Prompt
+from ..schemas.models_schema import CategoryResponse, PromptResponse
+from ..services.s3 import normalize_image_url
 
 router = APIRouter(
     prefix="/api",

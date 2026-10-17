@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from app.config import settings
+from .config import settings
 
 # Detect if database is SQLite to apply connection arguments
 is_sqlite = settings.DATABASE_URL.startswith("sqlite")
