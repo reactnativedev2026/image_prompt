@@ -1,7 +1,7 @@
 import io
 from app.config import settings
 from app.services.s3 import upload_image_to_s3, rename_or_move_s3_image, delete_s3_image
-from app.services.cloudinary_service import upload_image_to_cloudinary, rename_or_move_cloudinary_image, delete_cloudinary_image
+# from app.services.cloudinary_service import upload_image_to_cloudinary, rename_or_move_cloudinary_image, delete_cloudinary_image
 from app.services.local_backup import save_local_image_backup, organize_local_backup
 
 def upload_image(file_obj, filename: str = "", folder: str = "ai_prompt_gallery") -> dict:
@@ -24,7 +24,7 @@ def upload_image(file_obj, filename: str = "", folder: str = "ai_prompt_gallery"
     if provider == "s3":
         upload_result = upload_image_to_s3(io.BytesIO(file_bytes), filename=filename, folder=folder, convert_to_webp=True)
     else:
-        upload_result = upload_image_to_cloudinary(io.BytesIO(file_bytes), filename=filename, folder=folder)
+#        upload_result = upload_image_to_cloudinary(io.BytesIO(file_bytes), filename=filename, folder=folder)  # Cloudinary disabled
 
     # 3. Always save local server disk backup
     backup_key = upload_result.get("key") or upload_result.get("public_id") or f"{folder}/{filename}"
@@ -46,7 +46,8 @@ def rename_or_move_image(old_url_or_key: str, new_identifier: str) -> str:
         if "cloudinary.com" not in old_url_or_key:
             return rename_or_move_s3_image(old_url_or_key, new_identifier)
             
-    if "cloudinary.com" in old_url_or_key:
+#    # if "cloudinary.com" in old_url_or_key:
+#    #     return rename_or_move_cloudinary_image(old_url_or_key, new_identifier)
         return rename_or_move_cloudinary_image(old_url_or_key, new_identifier)
         
     provider = getattr(settings, "STORAGE_PROVIDER", "cloudinary").lower()
@@ -59,8 +60,8 @@ def delete_image(url_or_key: str) -> bool:
     if not url_or_key:
         return False
         
-    if "cloudinary.com" in url_or_key:
-        return delete_cloudinary_image(url_or_key)
+#    # if "cloudinary.com" in url_or_key:
+#        # return delete_cloudinary_image(url_or_key)
         
     if "amazonaws.com" in url_or_key:
         return delete_s3_image(url_or_key)

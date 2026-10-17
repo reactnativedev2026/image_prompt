@@ -11,12 +11,12 @@ class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
     
     # Storage Provider: "cloudinary" or "s3"
-    STORAGE_PROVIDER: str = os.getenv("STORAGE_PROVIDER", "cloudinary")
+    STORAGE_PROVIDER: str = os.getenv("STORAGE_PROVIDER", "s3")
 
-    # Cloudinary Config
-    CLOUDINARY_CLOUD_NAME: str = os.getenv("CLOUDINARY_CLOUD_NAME", "")
-    CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY", "")
-    CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET", "")
+    # Cloudinary Config (commented out)
+    # CLOUDINARY_CLOUD_NAME: str = os.getenv("CLOUDINARY_CLOUD_NAME", "")
+    # CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY", "")
+    # CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET", "")
 
     # AWS S3 Config
     AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", "AKIA6PBBDMMXW4FJKOXV")
