@@ -20,7 +20,7 @@ def upload_image(file_obj, filename: str = "", folder: str = "ai_prompt_gallery"
         file_bytes = b""
 
     # 2. Upload to primary cloud provider (Cloudinary or S3)
-    provider = getattr(settings, "STORAGE_PROVIDER", "cloudinary").lower()
+    provider = getattr(settings, "STORAGE_PROVIDER", "s3").lower()
     if provider == "s3":
         upload_result = upload_image_to_s3(io.BytesIO(file_bytes), filename=filename, folder=folder, convert_to_webp=True)
     else:
@@ -50,7 +50,7 @@ def rename_or_move_image(old_url_or_key: str, new_identifier: str) -> str:
 #    #     return rename_or_move_cloudinary_image(old_url_or_key, new_identifier)
         return rename_or_move_cloudinary_image(old_url_or_key, new_identifier)
         
-    provider = getattr(settings, "STORAGE_PROVIDER", "cloudinary").lower()
+    provider = getattr(settings, "STORAGE_PROVIDER", "s3").lower()
     if provider == "s3":
         return rename_or_move_s3_image(old_url_or_key, new_identifier)
     return rename_or_move_cloudinary_image(old_url_or_key, new_identifier)
@@ -66,7 +66,7 @@ def delete_image(url_or_key: str) -> bool:
     if "amazonaws.com" in url_or_key:
         return delete_s3_image(url_or_key)
         
-    provider = getattr(settings, "STORAGE_PROVIDER", "cloudinary").lower()
+    provider = getattr(settings, "STORAGE_PROVIDER", "s3").lower()
     if provider == "s3":
         return delete_s3_image(url_or_key)
     return delete_cloudinary_image(url_or_key)
