@@ -112,7 +112,7 @@ def _build_prioritized_ordering(db: Session, seed_val: int, only_trending: bool 
 # ── Fetch Categories (App & Admin view) ──
 @router.get("/categories", response_model=list[CategoryResponse])
 def get_categories(
-    include_all: bool = Query(False, description="Include all prompts including inactive AWS S3"),
+    include_all: bool = Query(True, description="Include all prompts including inactive AWS S3"),
     db: Session = Depends(get_db)
 ):
     if not include_all:
@@ -159,7 +159,7 @@ def get_prompts(
     search: str | None = Query(None, description="Search prompts by prompt text"),
     order: str = Query("popular", description="Ordering: 'random', 'latest', 'oldest', 'popular', 'points'"),
     seed: int | None = Query(None, description="Random seed for consistent pagination during a session"),
-    include_all: bool = Query(False, description="Include all prompts including inactive S3"),
+    include_all: bool = Query(True, description="Include all prompts including inactive S3"),
     only_aws: bool = Query(False, description="Filter only AWS S3 prompts"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     limit: int = Query(20, ge=1, le=500, description="Items per page"),
@@ -258,7 +258,7 @@ def get_trending_prompts(
     category_id: int | None = Query(None, description="Filter trending prompts by Category ID"),
     order: str = Query("popular", description="Ordering: 'random', 'latest', 'popular'"),
     seed: int | None = Query(None, description="Random seed for consistent pagination during a session"),
-    include_all: bool = Query(False, description="Include all prompts including inactive S3"),
+    include_all: bool = Query(True, description="Include all prompts including inactive S3"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
