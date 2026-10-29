@@ -6,6 +6,7 @@ from sqlalchemy import inspect, text
 from .config import settings
 from .database import engine, Base
 from .routers import admin, prompts
+from .services.local_backup import get_backup_dir
 
 # Create DB Tables automatically on startup
 Base.metadata.create_all(bind=engine)
@@ -45,8 +46,7 @@ app.add_middleware(
 )
 
 # Mount local media backup directory for static direct access
-media_backup_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "media_backup")
-os.makedirs(media_backup_dir, exist_ok=True)
+media_backup_dir = get_backup_dir()
 app.mount("/media_backup", StaticFiles(directory=media_backup_dir), name="media_backup")
 
 # Register routers

@@ -9,7 +9,9 @@ except ImportError:
     HAS_PIL = False
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MEDIA_BACKUP_DIR = os.path.join(BASE_DIR, "media_backup")
+# Keep media backups outside a deploy/release directory when MEDIA_BACKUP_DIR is
+# configured (for example, /var/backups/prompt-backend/media_backup).
+MEDIA_BACKUP_DIR = os.getenv("MEDIA_BACKUP_DIR", os.path.join(BASE_DIR, "media_backup"))
 
 def get_backup_dir() -> str:
     """Returns the base local media backup directory and ensures it exists."""
