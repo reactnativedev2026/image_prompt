@@ -16,7 +16,7 @@ import { AdState } from './src/utils/adState';
 const adUnitId = __DEV__ ? TestIds.APP_OPEN : 'ca-app-pub-6300754811006363/3831258708';
 
 const appOpenAd = AppOpenAd.createForAdRequest(adUnitId, {
-  requestNonPersonalizedAdsOnly: true,
+  requestNonPersonalizedAdsOnly: false,
 });
 
 const APP_OPEN_COUNT_KEY = 'app_open_count';
@@ -74,9 +74,15 @@ const App = () => {
         console.log('MobileAds initialization error:', err);
       });
 
+    let appOpenRetryTimeout: ReturnType<typeof setTimeout> | null = null;
+
     // Setup App Open Ads listeners
     const unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
       console.log('App Open Ad loaded');
+      if (appOpenRetryTimeout) {
+        clearTimeout(appOpenRetryTimeout);
+        appOpenRetryTimeout = null;
+      }
       // Policy-compliant Cold Start: only show if splash/onboarding screen is still active
       if (AdState.isOnboardingActive && !AdState.isAdShowing) {
         AdState.isAdShowing = true;
@@ -100,6 +106,13 @@ const App = () => {
       console.log('App Open Ad Error', error);
       AdState.isAdShowing = false;
       DeviceEventEmitter.emit('appOpenAdClosed');
+      if (appOpenRetryTimeout) {
+        clearTimeout(appOpenRetryTimeout);
+      }
+      appOpenRetryTimeout = setTimeout(() => {
+        console.log('Retrying App Open Ad load after 30s...');
+        appOpenAd.load();
+      }, 30000);
     });
 
     // Initial load
@@ -119,8 +132,8 @@ const App = () => {
         }
 
         const now = Date.now();
-        // Show on resume with 15s cooldown
-        if (appOpenAd.loaded && !AdState.isAdShowing && (now - AdState.lastAdShowTime > 15000)) {
+        // Show on resume with cooldown
+        if (appOpenAd.loaded && !AdState.isAdShowing && (now - AdState.lastAdShowTime > 5000)) {
           AdState.isAdShowing = true;
           appOpenAd.show().catch(() => {
             AdState.isAdShowing = false;
@@ -132,6 +145,9 @@ const App = () => {
     });
 
     return () => {
+      if (appOpenRetryTimeout) {
+        clearTimeout(appOpenRetryTimeout);
+      }
       unsubscribeLoaded();
       unsubscribeClosed();
       unsubscribeError();

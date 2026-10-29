@@ -7,7 +7,7 @@ import { InterstitialAd, TestIds, AdEventType } from 'react-native-google-mobile
 
 const interstitialAdUnitId = __DEV__ ? TestIds.INTERSTITIAL : 'ca-app-pub-6300754811006363/7535534141';
 const interstitial = InterstitialAd.createForAdRequest(interstitialAdUnitId, {
-  requestNonPersonalizedAdsOnly: true,
+  requestNonPersonalizedAdsOnly: false,
 });
 import { AdState } from '../utils/adState';
 
@@ -53,8 +53,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     loadData();
 
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+
     const unsubscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
       console.log('Interstitial Ad loaded');
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+        retryTimeout = null;
+      }
     });
 
     const unsubscribeClosed = interstitial.addAdEventListener(AdEventType.CLOSED, () => {
@@ -66,11 +72,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const unsubscribeError = interstitial.addAdEventListener(AdEventType.ERROR, (error) => {
       console.log('Interstitial Ad Error:', error);
       AdState.isAdShowing = false;
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+      retryTimeout = setTimeout(() => {
+        console.log('Retrying Interstitial Ad load after 30s...');
+        interstitial.load();
+      }, 30000);
     });
 
     interstitial.load();
 
     return () => {
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
       unsubscribeLoaded();
       unsubscribeClosed();
       unsubscribeError();
@@ -80,8 +96,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const showInterstitialAd = () => {
     actionCount.current += 1;
     const now = Date.now();
-    // AdMob Policy compliance: only show at natural transitions, not on initial actions, with 45s cooldown
-    if (actionCount.current > 2 && actionCount.current % 4 === 0) {
+    // Improved frequency: trigger on every 2nd action (2, 4, 6...) with 5s cooldown to prevent back-to-back spam
+    if (actionCount.current >= 2 && actionCount.current % 2 === 0) {
       if (interstitial.loaded && !AdState.isAdShowing && (now - AdState.lastAdShowTime > 5000)) {
         AdState.isAdShowing = true;
         interstitial.show();

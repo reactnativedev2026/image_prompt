@@ -189,7 +189,7 @@ const ReelItem = ({
       >
         {/* ── Main Hero Image Box ── */}
         <View style={styles.imageContainer}>
-          <Image source={{ uri: item.imageUrl }} style={StyleSheet.absoluteFillObject} blurRadius={20} />
+          <Image source={{ uri: item.imageUrl }} style={StyleSheet.absoluteFillObject} blurRadius={20} resizeMode="cover" />
           <FastImage
             source={{
               uri: item.imageUrl,
@@ -197,7 +197,7 @@ const ReelItem = ({
               cache: FastImage.cacheControl.immutable,
             }}
             style={styles.heroImage}
-            resizeMode={FastImage.resizeMode.cover}
+            resizeMode={FastImage.resizeMode.contain}
           />
         </View>
 
