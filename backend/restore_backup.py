@@ -14,6 +14,12 @@ from app.models import Admin, Category, Prompt
 
 
 DEFAULT_BACKUP = Path(__file__).parent / "backups" / "data_export_latest.json"
+IMAGE_URL_REPLACEMENTS = {
+    "https://res.cloudinary.com/kpoj1z5k/image/upload/v1785999790/ai_prompt_gallery/ni9dlchzdxzfxysjonzn.webp": (
+        "https://2026promptbucket.s3.eu-north-1.amazonaws.com/"
+        "ai_prompt_gallery/cloudinary-migration-2026-10-29/ni9dlchzdxzfxysjonzn.webp"
+    ),
+}
 
 
 def parse_datetime(value):
@@ -51,35 +57,41 @@ def restore(backup_path: Path, apply: bool) -> None:
                 ))
 
         for record in categories:
-            existing = db.get(Category, record["id"]) or db.query(Category).filter_by(name=record["name"]).first()
+            # Prefer an existing category with the same name. If only the old
+            # numeric ID is occupied, create a new category ID instead.
+            existing = db.query(Category).filter_by(name=record["name"]).first()
             if existing:
                 category_ids[record["id"]] = existing.id
                 planned["skipped"] += 1
                 continue
             planned["categories"] += 1
-            category_ids[record["id"]] = record["id"]
             if apply:
-                db.add(Category(id=record["id"], name=record["name"], created_at=parse_datetime(record.get("created_at"))))
+                category = Category(name=record["name"], created_at=parse_datetime(record.get("created_at")))
+                db.add(category)
+                category_ids[record["id"]] = category
 
         if apply:
             db.flush()
+            category_ids = {
+                old_id: category.id if isinstance(category, Category) else category
+                for old_id, category in category_ids.items()
+            }
 
         for record in prompts:
-            if db.get(Prompt, record["id"]):
+            image_url = IMAGE_URL_REPLACEMENTS.get(record["image_url"], record["image_url"])
+            existing = db.query(Prompt).filter_by(
+                image_url=image_url, prompt_text=record["prompt_text"]
+            ).first()
+            if existing:
                 planned["skipped"] += 1
                 continue
-            category_id = category_ids.get(record["category_id"], record["category_id"])
-            category_exists = db.get(Category, category_id) if apply else any(
-                item["id"] == record["category_id"] for item in categories
-            )
-            if not category_exists:
-                print(f"Skipping prompt {record['id']}: category {record['category_id']} is unavailable")
-                planned["skipped"] += 1
-                continue
+            category_id = category_ids.get(record["category_id"])
+            if apply and category_id is None:
+                raise ValueError(f"Prompt {record['id']} has no imported category")
             planned["prompts"] += 1
             if apply:
                 db.add(Prompt(
-                    id=record["id"], image_url=record["image_url"], prompt_text=record["prompt_text"],
+                    image_url=image_url, prompt_text=record["prompt_text"],
                     is_trending=bool(record.get("is_trending", False)),
                     view_count=record.get("view_count", 0), copy_count=record.get("copy_count", 0),
                     favorite_count=record.get("favorite_count", 0),
